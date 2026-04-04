@@ -1,17 +1,12 @@
 //! # Aura Web Backend
 //!
-//! Generates HTML/CSS/JavaScript from Aura HIR/LIR.
+//! Generates HTML/CSS/JavaScript from Aura HIR.
 //!
 //! ## Output Structure
-//! - `index.html` — App shell
+//! - `index.html` — App shell with component rendering
 //! - `styles.css` — Design tokens as CSS custom properties + component styles
 //! - `app.js` — Reactive state management + event handlers
-//!
-//! ## Design Token Mapping
-//! - Spacing tokens → CSS custom properties (`--spacing-md: 0.5rem`)
-//! - Typography → CSS font properties
-//! - Colors → CSS custom properties with light/dark variants
-//! - Shapes → CSS border-radius
-//! - Motion → CSS transitions/animations
 
-// Web backend will be implemented in Phase 2.
+mod codegen;
+
+pub use codegen::{compile_to_web, WebOutput};

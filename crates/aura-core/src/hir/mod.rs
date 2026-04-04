@@ -7,6 +7,8 @@
 //! Backends that cannot express HIR concepts natively (HTML/CSS) consume
 //! the LIR (Low-level IR) instead, which is produced by lowering HIR.
 
+pub mod builder;
 pub mod nodes;
 
+pub use builder::build_hir;
 pub use nodes::*;

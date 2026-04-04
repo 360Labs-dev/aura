@@ -1992,8 +1992,17 @@ impl Parser {
 
         loop {
             if self.check(&Token::Dot) {
+                // .accent, .bold, .md etc.
                 tokens.extend(self.parse_design_tokens());
+            } else if self.is_compound_design_token_ahead() {
+                // gap.md, padding.lg, align.center, size.xl etc.
+                if let Some(token) = self.parse_compound_design_token() {
+                    tokens.push(token);
+                } else {
+                    break;
+                }
             } else if self.is_prop_assign_ahead() {
+                // name: value
                 if let Some(prop) = self.parse_prop_assign() {
                     props.push(prop);
                 } else {
@@ -2005,6 +2014,37 @@ impl Parser {
         }
 
         (tokens, props)
+    }
+
+    /// Check if current position has a compound design token like `gap.md`.
+    fn is_compound_design_token_ahead(&self) -> bool {
+        if let Some(Token::Ident(name)) = self.peek() {
+            if is_compound_token_prefix(name) {
+                // Check next token is Dot
+                if self.tokens.get(self.pos + 1).map(|t| &t.value) == Some(&Token::Dot) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Parse a compound design token: `gap.md`, `padding.horizontal.lg`, etc.
+    fn parse_compound_design_token(&mut self) -> Option<DesignToken> {
+        let span = self.peek_span();
+        let (first, _) = self.expect_ident().ok()?;
+        let mut segments = vec![first];
+
+        while self.eat(&Token::Dot) {
+            if let Some(Token::Ident(_)) = self.peek() {
+                let (s, _) = self.expect_ident().ok()?;
+                segments.push(s);
+            } else {
+                break;
+            }
+        }
+
+        Some(DesignToken { segments, span })
     }
 
     fn parse_prop_assign(&mut self) -> Option<PropAssign> {
@@ -2031,6 +2071,16 @@ impl Parser {
 }
 
 /// Check if a name is a known design token.
+/// Check if name is a compound design token prefix (e.g., `gap`, `padding`, `margin`).
+fn is_compound_token_prefix(name: &str) -> bool {
+    matches!(
+        name,
+        "gap" | "padding" | "margin" | "size" | "width" | "height"
+            | "radius" | "shadow" | "elevation" | "opacity"
+            | "align" | "justify" | "max" | "min" | "direction"
+    )
+}
+
 fn is_design_token_name(name: &str) -> bool {
     matches!(
         name,
