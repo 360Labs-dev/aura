@@ -1,0 +1,45 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/aura-core",
+    "crates/aura-cli",
+    "crates/aura-backend-web",
+    "crates/aura-backend-swift",
+    "crates/aura-backend-compose",
+    "crates/aura-backend-win",
+    "crates/aura-backend-tui",
+    "crates/aura-lsp",
+    "crates/aura-agent",
+    "crates/aura-pkg",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/aura-lang/aura"
+
+[workspace.dependencies]
+# Lexer
+logos = "0.15"
+
+# Parser
+chumsky = "0.10"
+
+# Error reporting
+ariadne = "0.5"
+thiserror = "2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Utilities
+strsim = "0.11"       # Edit distance for "did you mean?"
+unicode-normalization = "0.1"
+
+# Testing
+insta = "1"           # Snapshot testing
