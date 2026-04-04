@@ -1553,7 +1553,21 @@ impl Parser {
             Token::Text | Token::Int | Token::Float | Token::Bool | Token::Timestamp
             | Token::Duration | Token::Percent | Token::Secret | Token::Sanitized
             | Token::Email | Token::Url | Token::TokenType => {
-                let name = format!("{}", self.peek().unwrap());
+                let name = match self.peek().unwrap() {
+                    Token::Text => "text",
+                    Token::Int => "int",
+                    Token::Float => "float",
+                    Token::Bool => "bool",
+                    Token::Timestamp => "timestamp",
+                    Token::Duration => "duration",
+                    Token::Percent => "percent",
+                    Token::Secret => "secret",
+                    Token::Sanitized => "sanitized",
+                    Token::Email => "email",
+                    Token::Url => "url",
+                    Token::TokenType => "token",
+                    _ => unreachable!(),
+                }.to_string();
                 self.advance();
                 Some(TypeExpr::Named(name, span))
             }
