@@ -1,0 +1,18 @@
+[package]
+name = "aura-cli"
+description = "Aura language CLI: build, run, test, playground"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "aura"
+path = "src/main.rs"
+
+[dependencies]
+aura-core = { path = "../aura-core" }
+aura-backend-web = { path = "../aura-backend-web" }
+aura-backend-swift = { path = "../aura-backend-swift" }
+aura-backend-compose = { path = "../aura-backend-compose" }
+clap.workspace = true
+serde_json.workspace = true
