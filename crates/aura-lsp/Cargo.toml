@@ -1,0 +1,10 @@
+[package]
+name = "aura-lsp"
+description = "Aura Language Server Protocol implementation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+aura-core = { path = "../aura-core" }
+serde_json.workspace = true
