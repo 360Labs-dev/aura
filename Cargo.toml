@@ -11,6 +11,7 @@ members = [
     "crates/aura-lsp",
     "crates/aura-agent",
     "crates/aura-pkg",
+    "crates/aura-benchmark",
 ]
 
 [workspace.package]

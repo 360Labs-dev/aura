@@ -1,0 +1,16 @@
+[package]
+name = "aura-benchmark"
+description = "Aura language benchmark runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "aura-bench"
+path = "../../benchmarks/run.rs"
+
+[dependencies]
+aura-core = { path = "../aura-core" }
+aura-backend-web = { path = "../aura-backend-web" }
+aura-backend-swift = { path = "../aura-backend-swift" }
+aura-backend-compose = { path = "../aura-backend-compose" }
