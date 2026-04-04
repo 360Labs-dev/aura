@@ -100,20 +100,14 @@ fn main() {
         Commands::Run { target, preview, port } => {
             eprintln!("  aura run not yet implemented (dev server coming in Phase 2)");
         }
-        Commands::Fmt { path, check } => {
-            eprintln!("  aura fmt not yet implemented");
-        }
+        Commands::Fmt { path, check } => fmt_command(&path, check),
         Commands::Explain { file } => explain_command(&file),
         Commands::Diff { a, b } => diff_command(&a, &b),
-        Commands::Init { name, template } => {
-            eprintln!("  aura init not yet implemented");
-        }
+        Commands::Init { name, template } => init_command(&name, &template),
         Commands::Doctor => {
             eprintln!("  aura doctor not yet implemented");
         }
-        Commands::Sketch { description } => {
-            eprintln!("  aura sketch not yet implemented");
-        }
+        Commands::Sketch { description } => sketch_command(&description),
         Commands::Pkg { action } => {
             eprintln!("  aura pkg not yet implemented");
         }
@@ -360,6 +354,38 @@ fn byte_to_line_col(source: &str, byte_offset: usize) -> (usize, usize) {
     (line, col)
 }
 
+fn fmt_command(path: &str, check: bool) {
+    let source = match std::fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  error: Cannot read '{}': {}", path, e);
+            std::process::exit(1);
+        }
+    };
+
+    let result = aura_core::parser::parse(&source);
+    if let Some(ref program) = result.program {
+        let formatted = aura_core::fmt::format(program);
+        if check {
+            if formatted == source {
+                eprintln!("  {} is already formatted", path);
+            } else {
+                eprintln!("  {} needs formatting", path);
+                std::process::exit(1);
+            }
+        } else {
+            std::fs::write(path, &formatted).expect("Failed to write formatted file");
+            eprintln!("  Formatted: {}", path);
+        }
+    } else {
+        eprintln!("  error: Cannot format '{}' — parse errors:", path);
+        for err in &result.errors {
+            eprintln!("    {}", err.message);
+        }
+        std::process::exit(1);
+    }
+}
+
 fn explain_command(file: &str) {
     let source = match std::fs::read_to_string(file) {
         Ok(s) => s,
@@ -426,4 +452,117 @@ fn diff_command(file_a: &str, file_b: &str) {
     println!("  {} → {}", file_a, file_b);
     println!();
     print!("{}", aura_core::diff::format_diff(&changes));
+}
+
+fn sketch_command(description: &str) {
+    eprintln!();
+    eprintln!("  aura sketch");
+    eprintln!("  Description: \"{}\"", description);
+    eprintln!();
+
+    let code = aura_core::sketch::sketch(description);
+
+    // Verify it parses
+    let result = aura_core::parser::parse(&code);
+    if result.program.is_none() {
+        eprintln!("  warning: generated code has parse issues (template bug)");
+    }
+
+    // Write to file
+    let filename = "sketch.aura";
+    std::fs::write(filename, &code).expect("Failed to write sketch.aura");
+
+    eprintln!("  Generated: {} ({} lines)", filename, code.lines().count());
+    eprintln!();
+
+    // Also print to stdout
+    println!("{}", code);
+
+    eprintln!("  Building preview...");
+
+    // Auto-build for web
+    let hir = aura_core::hir::build_hir(result.program.as_ref().unwrap());
+    let output = aura_backend_web::compile_to_web(&hir);
+
+    let out_dir = "build/sketch";
+    std::fs::create_dir_all(out_dir).ok();
+    std::fs::write(format!("{}/index.html", out_dir), &output.html).ok();
+    std::fs::write(format!("{}/styles.css", out_dir), &output.css).ok();
+    std::fs::write(format!("{}/app.js", out_dir), &output.js).ok();
+
+    eprintln!("  Preview: {}/index.html", out_dir);
+    eprintln!();
+    eprintln!("  Open sketch.aura to customize, or run:");
+    eprintln!("    aura build sketch.aura --target all");
+}
+
+fn init_command(name: &str, template: &str) {
+    let dir = Path::new(name);
+    if dir.exists() {
+        eprintln!("  error: Directory '{}' already exists", name);
+        std::process::exit(1);
+    }
+
+    let app_name = Path::new(name)
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let app_name = if app_name.is_empty() { "MyApp".to_string() } else {
+        let mut chars = app_name.chars();
+        chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default() + chars.as_str()
+    };
+
+    std::fs::create_dir_all(dir.join("src")).expect("Failed to create project directory");
+
+    // aura.toml
+    let toml = format!(r#"[app]
+name = "{}"
+version = "0.1.0"
+aura-version = "0.1.0"
+
+[targets]
+web = true
+ios = true
+android = true
+
+[theme]
+default = "modern.light"
+"#, app_name);
+    std::fs::write(dir.join("aura.toml"), toml).expect("Failed to write aura.toml");
+
+    // src/main.aura
+    let main_aura = match template {
+        "counter" => aura_core::sketch::sketch("counter app"),
+        "todo" => aura_core::sketch::sketch("todo app with filter"),
+        "chat" => aura_core::sketch::sketch("chat app"),
+        _ => format!(r#"app {}
+  theme: modern.light
+
+  screen Main
+    view
+      column gap.lg padding.2xl align.center
+        heading "{}" size.2xl .bold
+        text "Welcome to your new Aura app!" .secondary
+        button "Get Started" .accent .pill -> getStarted()
+
+    action getStarted
+      return
+"#, app_name, app_name),
+    };
+    std::fs::write(dir.join("src/main.aura"), main_aura).expect("Failed to write main.aura");
+
+    // .gitignore
+    std::fs::write(dir.join(".gitignore"), "build/\n").ok();
+
+    eprintln!();
+    eprintln!("  Created project: {}/", name);
+    eprintln!();
+    eprintln!("  {}/aura.toml       Project configuration", name);
+    eprintln!("  {}/src/main.aura   Entry point", name);
+    eprintln!();
+    eprintln!("  Next steps:");
+    eprintln!("    cd {}", name);
+    eprintln!("    aura build src/main.aura --target web");
+    eprintln!("    aura build src/main.aura --target all");
 }
