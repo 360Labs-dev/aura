@@ -1,0 +1,225 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Aura",
+  "scopeName": "source.aura",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#design-tokens" },
+    { "include": "#operators" },
+    { "include": "#declarations" },
+    { "include": "#view-elements" },
+    { "include": "#type-identifiers" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.aura",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.aura",
+          "begin": "/\\*",
+          "end": "\\*/"
+        },
+        {
+          "name": "comment.line.documentation.aura",
+          "match": "///.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.aura",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.aura",
+              "match": "\\\\."
+            },
+            {
+              "name": "variable.other.interpolation.aura",
+              "begin": "\\{",
+              "end": "\\}",
+              "patterns": [
+                { "include": "#identifiers" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.aura",
+          "match": "\\b[0-9][0-9_]*\\.[0-9][0-9_]*\\b"
+        },
+        {
+          "name": "constant.numeric.integer.aura",
+          "match": "\\b[0-9][0-9_]*\\b"
+        },
+        {
+          "name": "constant.numeric.percent.aura",
+          "match": "\\b[0-9][0-9_]*%"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.aura",
+          "match": "\\b(if|else|each|as|when|is|then|return|navigate|emit|in)\\b"
+        },
+        {
+          "name": "keyword.declaration.aura",
+          "match": "\\b(app|screen|model|component|view|action|fn|on|style|theme|state|const|let|import|from)\\b"
+        },
+        {
+          "name": "keyword.other.aura",
+          "match": "\\b(and|or|not|with|where|some|slot|platform|route)\\b"
+        },
+        {
+          "name": "constant.language.aura",
+          "match": "\\b(true|false|nil)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.aura",
+          "match": "\\b(text|int|float|bool|timestamp|duration|percent)\\b"
+        },
+        {
+          "name": "support.type.security.aura",
+          "match": "\\b(secret|sanitized|email|url|token)\\b"
+        },
+        {
+          "name": "support.type.collection.aura",
+          "match": "\\b(list|map|set|optional|enum)\\b"
+        },
+        {
+          "name": "support.type.other.aura",
+          "match": "\\b(action)(?=\\s*[\\(\\)])"
+        }
+      ]
+    },
+    "design-tokens": {
+      "patterns": [
+        {
+          "name": "constant.other.design-token.aura",
+          "match": "\\.(xs|sm|md|lg|xl|2xl|3xl|4xl|display)\\b"
+        },
+        {
+          "name": "constant.other.color-token.aura",
+          "match": "\\.(primary|secondary|muted|accent|danger|warning|success|info|surface|background)\\b"
+        },
+        {
+          "name": "constant.other.typography-token.aura",
+          "match": "\\.(bold|medium|semibold|heavy|light|thin|italic|mono|underline|strike|center|leading|trailing|uppercase|lowercase|capitalize)\\b"
+        },
+        {
+          "name": "constant.other.shape-token.aura",
+          "match": "\\.(sharp|subtle|rounded|smooth|pill|circle)\\b"
+        },
+        {
+          "name": "constant.other.compound-token.aura",
+          "match": "\\b(gap|padding|margin|size|width|height|radius|shadow|elevation|align|justify)\\.(xs|sm|md|lg|xl|2xl|3xl|4xl|top|bottom|left|right|horizontal|vertical|center|start|end|between|around)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arrow.aura",
+          "match": "->|=>"
+        },
+        {
+          "name": "keyword.operator.pipe.aura",
+          "match": "\\|>"
+        },
+        {
+          "name": "keyword.operator.comparison.aura",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.assignment.aura",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.arithmetic.aura",
+          "match": "[+\\-*/%]"
+        },
+        {
+          "name": "keyword.operator.nil-coalesce.aura",
+          "match": "\\?\\?"
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "match": "\\b(app|screen|model|component)\\s+([A-Z][a-zA-Z0-9]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.aura" },
+            "2": { "name": "entity.name.type.aura" }
+          }
+        },
+        {
+          "match": "\\b(fn|action)\\s+([a-z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.aura" },
+            "2": { "name": "entity.name.function.aura" }
+          }
+        },
+        {
+          "match": "\\b(state|const|let)\\s+([a-z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.aura" },
+            "2": { "name": "variable.other.aura" }
+          }
+        }
+      ]
+    },
+    "view-elements": {
+      "patterns": [
+        {
+          "name": "support.function.layout.aura",
+          "match": "\\b(column|row|stack|grid|scroll|wrap)\\b"
+        },
+        {
+          "name": "support.function.widget.aura",
+          "match": "\\b(text|heading|image|icon|badge|divider|spacer|progress|avatar)\\b"
+        },
+        {
+          "name": "support.function.input.aura",
+          "match": "\\b(button|textfield|textarea|checkbox|toggle|slider|picker|datepicker|segmented|stepper|fab)\\b"
+        }
+      ]
+    },
+    "type-identifiers": {
+      "patterns": [
+        {
+          "name": "entity.name.type.aura",
+          "match": "\\b[A-Z][a-zA-Z0-9]*\\b"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.aura",
+          "match": "\\b[a-z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

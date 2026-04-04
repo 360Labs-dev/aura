@@ -1,0 +1,54 @@
+{
+  "name": "aura-lang",
+  "displayName": "Aura Language",
+  "description": "Syntax highlighting and language support for the Aura programming language",
+  "version": "0.1.0",
+  "publisher": "360labs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/360Labs-dev/aura"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "aura",
+    "ui",
+    "cross-platform",
+    "ai",
+    "design"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "aura",
+        "aliases": [
+          "Aura",
+          "aura"
+        ],
+        "extensions": [
+          ".aura"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "aura",
+        "scopeName": "source.aura",
+        "path": "./syntaxes/aura.tmLanguage.json"
+      }
+    ]
+  },
+  "activationEvents": [
+    "onLanguage:aura"
+  ]
+}
