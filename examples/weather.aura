@@ -1,0 +1,95 @@
+// Weather App — Demonstrates: API data, responsive layout, animations, theming
+
+app WeatherApp
+  theme: modern.light
+  platform: all
+
+  model Weather
+    city: text
+    temp: float
+    condition: enum[sunny, cloudy, rainy, snowy, stormy]
+    humidity: percent
+    wind: float
+    forecast: list[DayForecast]
+
+  model DayForecast
+    day: text
+    high: float
+    low: float
+    condition: enum[sunny, cloudy, rainy, snowy, stormy]
+
+  component WeatherCard(weather: Weather)
+    view
+      column .surface .smooth padding.xl gap.lg align.center
+        icon conditionIcon(weather.condition) size.3xl
+        text "{weather.temp.round()}°" size.display .bold
+        text weather.condition.toText() .capitalize .secondary
+        text weather.city size.lg .medium
+
+        divider .subtle
+
+        row gap.xl justify.center
+          column align.center gap.xs
+            icon "drop" .sm .info
+            text "{weather.humidity}" .sm
+            text "Humidity" size.xs .muted
+          column align.center gap.xs
+            icon "wind" .sm .info
+            text "{weather.wind} km/h" .sm
+            text "Wind" size.xs .muted
+
+    fn conditionIcon(c: enum[sunny, cloudy, rainy, snowy, stormy]) -> text
+      when c
+        is sunny -> "sun.max"
+        is cloudy -> "cloud"
+        is rainy -> "cloud.rain"
+        is snowy -> "cloud.snow"
+        is stormy -> "cloud.bolt"
+
+  component ForecastRow(day: DayForecast)
+    view
+      row gap.md align.center padding.sm
+        text day.day .medium width: 60
+        icon conditionIcon(day.condition) .secondary
+        spacer
+        text "{day.high.round()}°" .bold
+        text "{day.low.round()}°" .muted
+
+    fn conditionIcon(c: enum[sunny, cloudy, rainy, snowy, stormy]) -> text
+      when c
+        is sunny -> "sun.max"
+        is cloudy -> "cloud"
+        is rainy -> "cloud.rain"
+        is snowy -> "cloud.snow"
+        is stormy -> "cloud.bolt"
+
+  screen Main
+    state weather: optional[Weather] = nil
+    state loading: bool = true
+
+    view
+      column padding.lg gap.lg .background
+        if loading
+          column align.center padding.4xl
+            progress .indeterminate .accent
+            text "Loading weather..." .muted
+        else
+          if weather is some(w)
+            animate .spring
+              WeatherCard(w)
+
+            heading "7-Day Forecast" size.lg .bold padding.top.md
+
+            column .surface .rounded
+              each w.forecast as day
+                ForecastRow(day)
+                if day != w.forecast.last
+                  divider .subtle
+
+    on appear
+      loadWeather()
+
+    action loadWeather
+      loading = true
+      // In a real app, this would call a weather API
+      loading = false

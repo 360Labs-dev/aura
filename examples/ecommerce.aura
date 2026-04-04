@@ -1,0 +1,218 @@
+// E-Commerce App — Demonstrates: complex state, grid layouts, navigation stack,
+// security types, animations, platform adaptation
+
+app ShopApp
+  theme: modern.light
+  navigation: tabs
+  platform: all
+
+  model Product
+    id: text
+    name: text
+    description: sanitized
+    price: float
+    image: url
+    category: text
+    rating: float
+    reviews: int
+
+  model CartItem
+    product: Product
+    quantity: int
+
+  model Order
+    id: text
+    items: list[CartItem]
+    total: float
+    status: enum[pending, processing, shipped, delivered]
+    created: timestamp
+
+  model UserProfile
+    name: text
+    email: email
+    password: secret
+    address: optional[sanitized]
+    paymentToken: optional[token]
+
+  state cart: list[CartItem] = []
+  state user: optional[UserProfile] = nil
+
+  fn cartTotal -> float
+    cart.reduce(0.0, (sum, item) => sum + item.product.price * item.quantity.toFloat())
+
+  fn cartCount -> int
+    cart.reduce(0, (sum, item) => sum + item.quantity)
+
+  screen Browse tab: "house" label: "Shop"
+    state products: list[Product] = []
+    state search: text = ""
+    state category: text = "all"
+
+    view
+      column
+        // Search bar
+        row padding.md gap.sm .surface
+          textfield search placeholder: "Search products..." .pill
+          button.icon "slider.horizontal.3" -> showFilters()
+
+        // Categories
+        scroll direction: horizontal padding.horizontal.md
+          row gap.sm
+            each categories as cat
+              button cat .pill
+                style: if cat == category then .accent else .surface
+                -> selectCategory(cat)
+
+        // Product grid
+        scroll padding.md
+          grid min-width: 160 gap.md
+            each filteredProducts as product
+              ProductCard(product, onTap: -> viewProduct(product))
+
+    fn categories -> list[text]
+      ["all", "electronics", "clothing", "home", "sports"]
+
+    fn filteredProducts -> list[Product]
+      products
+        |> filter(p => category == "all" or p.category == category)
+        |> filter(p => search.isEmpty or p.name.contains(search))
+
+    action selectCategory(cat: text)
+      category = cat
+
+    action viewProduct(product: Product)
+      navigate(ProductDetail(product: product))
+
+    action showFilters
+      navigate.modal(Filters)
+
+  component ProductCard(product: Product, onTap: action)
+    view
+      button.ghost "" -> onTap()
+        column .surface .rounded gap.sm
+          image product.image height: 180 .rounded
+          column padding.sm gap.xs
+            text product.name .medium maxLines: 2
+            row align.center gap.sm
+              text "${product.price}" .bold .accent
+              spacer
+              row gap.xs align.center
+                icon "star.fill" size.xs .warning
+                text "{product.rating}" size.xs
+                text "({product.reviews})" size.xs .muted
+
+  screen ProductDetail(product: Product)
+    state selectedQuantity: int = 1
+
+    view
+      column
+        scroll
+          column gap.lg
+            image product.image height: 300 .fill
+
+            column padding.lg gap.md
+              text product.category .uppercase size.xs .accent .medium
+              heading product.name size.xl .bold
+              row align.center gap.md
+                text "${product.price}" size.2xl .bold .accent
+                row gap.xs align.center
+                  icon "star.fill" .warning
+                  text "{product.rating}" .medium
+                  text "({product.reviews} reviews)" .muted
+
+              divider .subtle
+
+              text product.description .secondary
+
+              divider .subtle
+
+              row gap.md align.center
+                text "Quantity" .medium
+                stepper selectedQuantity min: 1 max: 10
+                spacer
+                text "${product.price * selectedQuantity.toFloat()}" size.lg .bold
+
+        // Fixed bottom bar
+        row padding.lg gap.md .surface shadow.lg
+          button "Add to Cart" .accent .pill .fill
+            -> addToCart(product, selectedQuantity)
+
+    action addToCart(product: Product, qty: int)
+      let existing = cart.find(item => item.product.id == product.id)
+      when existing
+        is some(item)
+          cart = cart.map(i =>
+            if i.product.id == product.id
+              then i.with(quantity: i.quantity + qty)
+              else i)
+        is nil
+          cart = cart.append(CartItem(product: product, quantity: qty))
+      navigate.back
+
+  screen Cart tab: "cart" label: "Cart"
+    view
+      column
+        row padding.md .surface
+          heading "Cart" size.xl .bold
+          spacer
+          if cartCount > 0
+            badge cartCount .accent
+
+        if cart.isEmpty
+          column align.center padding.2xl gap.md
+            icon "cart" size.2xl .muted
+            text "Your cart is empty" .muted
+            button "Start Shopping" .accent .pill -> navigate(Browse)
+        else
+          scroll
+            column gap.sm padding.md
+              each cart as item
+                CartItemRow(item,
+                  onRemove: -> removeFromCart(item),
+                  onUpdate: (qty) -> updateQuantity(item, qty))
+
+              divider padding.vertical.md
+
+              row justify.between padding.md
+                text "Total" size.lg .bold
+                text "${cartTotal}" size.lg .bold .accent
+
+          row padding.lg .surface shadow.lg
+            button "Checkout" .accent .pill .fill -> checkout()
+
+    action removeFromCart(item: CartItem)
+      cart = cart.remove(item)
+
+    action updateQuantity(item: CartItem, qty: int)
+      if qty <= 0
+        removeFromCart(item)
+      else
+        cart = cart.map(i =>
+          if i == item then i.with(quantity: qty) else i)
+
+    action checkout
+      navigate(Checkout)
+
+  component CartItemRow(item: CartItem, onRemove: action, onUpdate: action(int))
+    view
+      row gap.md padding.sm .surface .rounded align.center
+        image item.product.image size.lg .rounded
+        column gap.xs
+          text item.product.name .medium
+          text "${item.product.price}" .accent
+        spacer
+        stepper item.quantity min: 0 max: 10
+          -> onUpdate(item.quantity)
+        button.icon "trash" .danger .sm -> onRemove()
+
+  screen Checkout
+    view
+      column padding.lg gap.lg
+        heading "Checkout" size.xl .bold
+        text "Checkout flow coming soon" .secondary
+
+  screen Filters
+    view
+      column padding.lg gap.lg
+        heading "Filters" size.xl .bold
+        text "Filter options coming soon" .secondary

@@ -1,0 +1,84 @@
+// Todo App — The "Hello World" of Aura
+// Demonstrates: models, state, views, actions, design tokens, components
+
+app TodoApp
+  theme: modern.dark
+  platform: all
+
+  model Todo
+    title: text
+    done: bool = false
+    created: timestamp = now()
+    priority: enum[low, medium, high] = low
+
+  component TodoRow(todo: Todo, onToggle: action, onDelete: action)
+    view
+      row gap.md align.center padding.sm .surface .rounded
+        checkbox todo.done -> onToggle()
+        column
+          text todo.title strike: todo.done
+          text todo.created |> formatDate size.xs .muted
+        spacer
+        badge todo.priority .sm
+        button.icon "trash" .danger .sm -> onDelete()
+
+  screen Main
+    state todos: list[Todo] = []
+    state input: text = ""
+    state filter: enum[all, active, done] = all
+
+    view
+      column gap.md padding.lg
+        heading "My Tasks" size.2xl .bold
+        text "{activeTodos.count()} remaining" .secondary
+
+        row gap.sm
+          textfield input placeholder: "What needs to be done?"
+            -> addTodo(input)
+          button "Add" .accent -> addTodo(input)
+
+        segmented filter options: [all, active, done]
+
+        if filteredTodos.isEmpty
+          column align.center padding.2xl gap.md
+            icon "checkmark.circle" size.2xl .muted
+            text "Nothing here" .muted .center
+        else
+          scroll
+            column gap.xs
+              each filteredTodos as todo
+                TodoRow(todo,
+                  onToggle: -> toggleTodo(todo),
+                  onDelete: -> deleteTodo(todo))
+
+        if todos.count() > 0
+          row justify.between padding.top.md
+            text "{todos.count(t => t.done)} completed" size.sm .muted
+            button.ghost "Clear done" .sm .muted -> clearDone()
+
+    fn formatDate(d: timestamp) -> text
+      d.format("MMM d")
+
+    fn activeTodos -> list[Todo]
+      todos.where(t => not t.done)
+
+    fn filteredTodos -> list[Todo]
+      when filter
+        is all -> todos
+        is active -> todos.where(t => not t.done)
+        is done -> todos.where(t => t.done)
+
+    action addTodo(title: text)
+      if not title.trim().isEmpty
+        todos = todos.append(Todo(title: title.trim()))
+        input = ""
+
+    action toggleTodo(todo: Todo)
+      todos = todos.map(t =>
+        if t == todo then t.with(done: not t.done) else t)
+
+    action deleteTodo(todo: Todo)
+      todos = todos.remove(todo)
+
+    action clearDone
+      todos = todos.where(t => not t.done)

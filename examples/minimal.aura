@@ -1,0 +1,6 @@
+// Minimal Aura Program — The absolute smallest valid Aura app
+
+app Hello
+  screen Main
+    view
+      text "Hello, Aura!"

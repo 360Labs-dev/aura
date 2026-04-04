@@ -1,0 +1,158 @@
+// Chat App — Demonstrates: real-time state, scroll behavior, user auth, navigation
+
+app ChatApp
+  theme: modern.dark
+  navigation: tabs
+  platform: all
+
+  model User
+    name: text
+    email: email
+    avatar: optional[url]
+
+  model Message
+    id: text
+    sender: User
+    content: sanitized
+    timestamp: timestamp
+    read: bool = false
+
+  model Conversation
+    id: text
+    participants: list[User]
+    messages: list[Message]
+    lastMessage: optional[Message]
+
+  state currentUser: optional[User] = nil
+
+  screen Conversations tab: "bubble.left.and.bubble.right" label: "Chats"
+    state conversations: list[Conversation] = []
+    state search: text = ""
+
+    view
+      column
+        row padding.md .surface
+          heading "Messages" size.xl .bold
+          spacer
+          button.icon "square.and.pencil" .accent -> newConversation()
+
+        textfield search placeholder: "Search..." padding.horizontal.md
+
+        if filteredConversations.isEmpty
+          column align.center padding.2xl gap.md
+            icon "bubble.left.and.bubble.right" size.2xl .muted
+            text "No conversations yet" .muted
+        else
+          scroll
+            column
+              each filteredConversations as convo
+                ConversationRow(convo, onTap: -> openConversation(convo))
+
+    fn filteredConversations -> list[Conversation]
+      if search.isEmpty
+        conversations
+      else
+        conversations.where(c =>
+          c.participants.find(p => p.name.contains(search)) is some(_))
+
+    action openConversation(convo: Conversation)
+      navigate(ChatDetail(conversation: convo))
+
+    action newConversation
+      navigate.modal(NewChat)
+
+  screen ChatDetail(conversation: Conversation) tab: nil
+    state messages: list[Message] = conversation.messages
+    state input: text = ""
+    state typing: bool = false
+
+    view
+      column
+        // Header
+        row padding.md .surface align.center gap.md
+          button.icon "chevron.left" -> navigate.back
+          avatar otherUser.avatar size.sm .circle
+          column
+            text otherUser.name .bold
+            if typing
+              text "typing..." size.xs .accent .italic
+          spacer
+          button.icon "phone" .accent
+          button.icon "video" .accent
+
+        // Messages
+        scroll .background padding.md
+          column gap.sm
+            each messages as msg
+              MessageBubble(msg, isMine: msg.sender == currentUser)
+
+        // Input
+        row gap.sm padding.md .surface align.center
+          button.icon "plus" .secondary
+          textfield input placeholder: "Message..." .pill
+          if input.isEmpty
+            button.icon "mic" .accent
+          else
+            button.icon "arrow.up.circle.fill" .accent -> sendMessage()
+
+    fn otherUser -> User
+      conversation.participants.find(p => p != currentUser) ?? conversation.participants.first
+
+    action sendMessage
+      if not input.trim().isEmpty
+        let msg = Message(
+          id: uuid(),
+          sender: currentUser ?? User(name: "Me", email: "me@example.com"),
+          content: input.trim().sanitize(),
+          timestamp: now())
+        messages = messages.append(msg)
+        input = ""
+
+  component ConversationRow(convo: Conversation, onTap: action)
+    view
+      button.ghost "" -> onTap()
+        row gap.md padding.md align.center
+          avatar otherUser(convo).avatar size.md .circle
+          column gap.xs
+            row justify.between
+              text otherUser(convo).name .bold
+              if convo.lastMessage is some(msg)
+                text msg.timestamp |> timeAgo size.xs .muted
+            if convo.lastMessage is some(msg)
+              text msg.content size.sm .secondary maxLines: 1
+
+    fn otherUser(c: Conversation) -> User
+      c.participants.find(p => p != currentUser) ?? c.participants.first
+
+    fn timeAgo(t: timestamp) -> text
+      let diff = now().since(t)
+      if diff < 1.minutes then "now"
+      else if diff < 1.hours then "{diff.minutes}m"
+      else if diff < 1.days then "{diff.hours}h"
+      else t.format("MMM d")
+
+  component MessageBubble(message: Message, isMine: bool)
+    view
+      row justify: if isMine then .end else .start
+        column gap.xs max-width: 75%
+          row padding.md .rounded
+            style: if isMine then .accent else .surface
+            text message.content
+          text message.timestamp.format("h:mm a") size.xs .muted
+            align: if isMine then .trailing else .leading
+
+  screen Profile tab: "person" label: "Profile"
+    view
+      column align.center padding.2xl gap.lg
+        if currentUser is some(user)
+          avatar user.avatar size.2xl .circle
+          heading user.name size.xl
+          text user.email .secondary
+        else
+          text "Not logged in" .muted
+
+  screen NewChat
+    view
+      column padding.lg gap.md
+        heading "New Message" size.xl .bold
+        text "Select a contact" .secondary
