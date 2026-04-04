@@ -9,7 +9,9 @@
 
 pub mod ast;
 pub mod design;
+pub mod diff;
 pub mod errors;
+pub mod explain;
 pub mod hir;
 pub mod lexer;
 pub mod lir;

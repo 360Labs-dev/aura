@@ -169,14 +169,20 @@ impl Parser {
     // === Expect helpers ===
 
     fn expect_ident(&mut self) -> Result<(String, Span), ()> {
+        let span = self.peek_span();
         match self.peek().cloned() {
             Some(Token::Ident(name)) => {
-                let span = self.peek_span();
+                self.advance();
+                Ok((name, span))
+            }
+            // Accept keywords as identifiers in certain contexts
+            // (e.g., field names, method names after dot, prop names)
+            Some(tok) if self.token_as_ident(&tok).is_some() => {
+                let name = self.token_as_ident(&tok).unwrap();
                 self.advance();
                 Ok((name, span))
             }
             _ => {
-                let span = self.peek_span();
                 self.error(
                     crate::errors::ErrorCode::E0702,
                     format!("Expected identifier, found {}", self.peek_desc()),
@@ -184,6 +190,47 @@ impl Parser {
                 );
                 Err(())
             }
+        }
+    }
+
+    /// Try to interpret a keyword token as an identifier name.
+    /// Many Aura keywords are also valid as field names, method names, etc.
+    fn token_as_ident(&self, token: &Token) -> Option<String> {
+        match token {
+            Token::Icon => Some("icon".to_string()),
+            Token::Image => Some("image".to_string()),
+            Token::Text => Some("text".to_string()),
+            Token::Badge => Some("badge".to_string()),
+            Token::Avatar => Some("avatar".to_string()),
+            Token::Progress => Some("progress".to_string()),
+            Token::Button => Some("button".to_string()),
+            Token::Back => Some("back".to_string()),
+            Token::Style => Some("style".to_string()),
+            Token::Action => Some("action".to_string()),
+            Token::State => Some("state".to_string()),
+            Token::View => Some("view".to_string()),
+            Token::Model => Some("model".to_string()),
+            Token::Platform => Some("platform".to_string()),
+            Token::Route => Some("route".to_string()),
+            Token::Palette => Some("palette".to_string()),
+            Token::Variants => Some("variants".to_string()),
+            Token::Email => Some("email".to_string()),
+            Token::Url => Some("url".to_string()),
+            Token::Secret => Some("secret".to_string()),
+            Token::Duration => Some("duration".to_string()),
+            Token::Toggle => Some("toggle".to_string()),
+            Token::Slider => Some("slider".to_string()),
+            Token::Picker => Some("picker".to_string()),
+            Token::Grid => Some("grid".to_string()),
+            Token::Scroll => Some("scroll".to_string()),
+            Token::Column => Some("column".to_string()),
+            Token::Row => Some("row".to_string()),
+            // Numeric-prefixed tokens like 2xl handled separately
+            Token::Integer(n) => {
+                // Check if followed by an ident to form "2xl", "3xl" etc.
+                None
+            }
+            _ => None,
         }
     }
 
@@ -369,7 +416,7 @@ impl Parser {
                     span: start,
                 }))
             }
-            Token::Ident(s) if s == "platform" => {
+            Token::Platform => {
                 // platform: all — skip for now
                 self.advance();
                 self.expect(&Token::Colon).ok()?;
@@ -1962,19 +2009,18 @@ impl Parser {
         let mut tokens = Vec::new();
         while self.check(&Token::Dot) {
             let span = self.peek_span();
-            self.advance();
-            if let Some(Token::Ident(name)) = self.peek().cloned() {
-                self.advance();
-                let mut segments = vec![name];
-                // Compound tokens: gap.md, padding.lg
+            self.advance(); // eat the dot
+            if let Some(first_segment) = self.try_parse_token_segment() {
+                let mut segments = vec![first_segment];
+                // Compound: .gap.md, etc.
                 while self.check(&Token::Dot) {
-                    if let Some(Token::Ident(_)) = self.tokens.get(self.pos + 1).map(|t| &t.value) {
-                        self.advance(); // dot
-                        if let Some(Token::Ident(s)) = self.peek().cloned() {
-                            self.advance();
-                            segments.push(s);
-                        }
+                    // Peek ahead to see if next after dot is a valid segment
+                    let saved = self.pos;
+                    self.advance(); // eat dot
+                    if let Some(seg) = self.try_parse_token_segment() {
+                        segments.push(seg);
                     } else {
+                        self.pos = saved; // put the dot back
                         break;
                     }
                 }
@@ -2036,15 +2082,45 @@ impl Parser {
         let mut segments = vec![first];
 
         while self.eat(&Token::Dot) {
-            if let Some(Token::Ident(_)) = self.peek() {
-                let (s, _) = self.expect_ident().ok()?;
-                segments.push(s);
+            if let Some(segment) = self.try_parse_token_segment() {
+                segments.push(segment);
             } else {
                 break;
             }
         }
 
         Some(DesignToken { segments, span })
+    }
+
+    /// Try to parse a design token segment — handles identifiers and
+    /// numeric-prefixed tokens like `2xl`, `3xl`, `4xl`.
+    fn try_parse_token_segment(&mut self) -> Option<String> {
+        match self.peek() {
+            Some(Token::Ident(_)) => {
+                let (s, _) = self.expect_ident().ok()?;
+                Some(s)
+            }
+            Some(Token::Integer(n)) => {
+                // Check for numeric prefix: 2xl, 3xl, 4xl
+                let n = *n;
+                let next_is_ident = matches!(
+                    self.tokens.get(self.pos + 1).map(|t| &t.value),
+                    Some(Token::Ident(_))
+                );
+                if next_is_ident {
+                    self.advance(); // eat integer
+                    if let Some(Token::Ident(suffix)) = self.peek().cloned() {
+                        self.advance(); // eat suffix
+                        Some(format!("{}{}", n, suffix))
+                    } else {
+                        Some(n.to_string())
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     }
 
     fn parse_prop_assign(&mut self) -> Option<PropAssign> {

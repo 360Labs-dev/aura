@@ -103,12 +103,8 @@ fn main() {
         Commands::Fmt { path, check } => {
             eprintln!("  aura fmt not yet implemented");
         }
-        Commands::Explain { file } => {
-            eprintln!("  aura explain not yet implemented");
-        }
-        Commands::Diff { a, b } => {
-            eprintln!("  aura diff not yet implemented");
-        }
+        Commands::Explain { file } => explain_command(&file),
+        Commands::Diff { a, b } => diff_command(&a, &b),
         Commands::Init { name, template } => {
             eprintln!("  aura init not yet implemented");
         }
@@ -307,4 +303,72 @@ fn byte_to_line_col(source: &str, byte_offset: usize) -> (usize, usize) {
         }
     }
     (line, col)
+}
+
+fn explain_command(file: &str) {
+    let source = match std::fs::read_to_string(file) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  error: Cannot read '{}': {}", file, e);
+            std::process::exit(1);
+        }
+    };
+
+    let result = aura_core::parser::parse(&source);
+    if let Some(ref program) = result.program {
+        let hir = aura_core::hir::build_hir(program);
+        let explanation = aura_core::explain::explain(&hir);
+        println!("{}", explanation);
+    } else {
+        eprintln!("  error: Failed to parse '{}'", file);
+        for err in &result.errors {
+            eprintln!("    {}", err.message);
+        }
+        std::process::exit(1);
+    }
+}
+
+fn diff_command(file_a: &str, file_b: &str) {
+    let source_a = match std::fs::read_to_string(file_a) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  error: Cannot read '{}': {}", file_a, e);
+            std::process::exit(1);
+        }
+    };
+    let source_b = match std::fs::read_to_string(file_b) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("  error: Cannot read '{}': {}", file_b, e);
+            std::process::exit(1);
+        }
+    };
+
+    let result_a = aura_core::parser::parse(&source_a);
+    let result_b = aura_core::parser::parse(&source_b);
+
+    let program_a = match result_a.program {
+        Some(p) => p,
+        None => {
+            eprintln!("  error: Failed to parse '{}'", file_a);
+            std::process::exit(1);
+        }
+    };
+    let program_b = match result_b.program {
+        Some(p) => p,
+        None => {
+            eprintln!("  error: Failed to parse '{}'", file_b);
+            std::process::exit(1);
+        }
+    };
+
+    let hir_a = aura_core::hir::build_hir(&program_a);
+    let hir_b = aura_core::hir::build_hir(&program_b);
+
+    let changes = aura_core::diff::diff(&hir_a, &hir_b);
+
+    println!("  Aura Semantic Diff");
+    println!("  {} → {}", file_a, file_b);
+    println!();
+    print!("{}", aura_core::diff::format_diff(&changes));
 }
