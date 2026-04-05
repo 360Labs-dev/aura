@@ -9,6 +9,7 @@
 
 pub mod ast;
 pub mod cache;
+pub mod declarations;
 pub mod design;
 pub mod diff;
 pub mod errors;
@@ -22,6 +23,7 @@ pub mod project;
 pub mod semantic;
 pub mod sketch;
 pub mod sourcemap;
+pub mod treeshake;
 pub mod types;
 
 /// Re-export commonly used types.

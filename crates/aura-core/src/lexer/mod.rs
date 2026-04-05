@@ -30,6 +30,8 @@ pub const INDENT_UNIT: usize = 2;
 pub struct LexResult {
     pub tokens: Vec<Spanned<Token>>,
     pub errors: Vec<crate::errors::AuraError>,
+    /// Preserved comments (trivia) with their source positions.
+    pub comments: Vec<Spanned<String>>,
 }
 
 /// A token with its span in the source.
@@ -90,16 +92,32 @@ pub fn lex(source: &str) -> LexResult {
         return LexResult {
             tokens: Vec::new(),
             errors,
+            comments: Vec::new(),
         };
     }
 
     // Phase 1: Raw tokenization with logos
     let raw_tokens = lex_raw(source, &mut errors);
 
-    // Phase 2: Synthesize Indent/Dedent from indentation
-    let tokens = process_indentation(source, raw_tokens, &mut errors);
+    // Extract comments as trivia before indentation processing
+    let mut comments = Vec::new();
+    let mut non_comment_tokens = Vec::new();
+    for tok in raw_tokens {
+        match &tok.value {
+            RawToken::SingleLineComment(s) | RawToken::MultiLineComment(s) => {
+                comments.push(Spanned {
+                    value: s.clone(),
+                    span: tok.span,
+                });
+            }
+            _ => non_comment_tokens.push(tok),
+        }
+    }
 
-    LexResult { tokens, errors }
+    // Phase 2: Synthesize Indent/Dedent from indentation
+    let tokens = process_indentation(source, non_comment_tokens, &mut errors);
+
+    LexResult { tokens, errors, comments }
 }
 
 /// Phase 1: Tokenize with logos, producing raw tokens with spans.

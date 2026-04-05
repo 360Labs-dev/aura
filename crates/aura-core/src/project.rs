@@ -30,6 +30,17 @@ pub struct Project {
     pub program: Program,
     /// All errors from parsing + resolution.
     pub errors: Vec<AuraError>,
+    /// Referenced projects (from aura.toml [references]).
+    pub references: Vec<ProjectReference>,
+}
+
+/// A reference to another Aura project.
+#[derive(Debug)]
+pub struct ProjectReference {
+    /// Path to the referenced project directory.
+    pub path: PathBuf,
+    /// Whether types from this project are available.
+    pub types_only: bool,
 }
 
 /// A single source file in the project.
@@ -94,6 +105,7 @@ pub fn load_project(root: &Path) -> Project {
                 },
             },
             errors,
+            references: Vec::new(),
         };
     }
 
@@ -148,6 +160,7 @@ pub fn load_project(root: &Path) -> Project {
         files: source_files,
         program,
         errors,
+        references: Vec::new(),
     }
 }
 
@@ -176,6 +189,7 @@ pub fn load_single_file(file: &Path) -> Project {
         }],
         program,
         errors: parse_result.errors,
+        references: Vec::new(),
     }
 }
 

@@ -275,12 +275,12 @@ pub enum RawToken {
     #[token("\n")]
     Newline,
 
-    // === Comments (skipped) ===
-    #[regex(r"//[^\n]*", logos::skip)]
-    SingleLineComment,
+    // === Comments (captured for trivia preservation) ===
+    #[regex(r"//[^\n]*", |lex| lex.slice().to_string())]
+    SingleLineComment(String),
 
-    #[regex(r"/\*([^*]|\*[^/])*\*/", logos::skip)]
-    MultiLineComment,
+    #[regex(r"/\*([^*]|\*[^/])*\*/", |lex| lex.slice().to_string())]
+    MultiLineComment(String),
 }
 
 /// The final token type exposed to the parser. Includes synthesized
@@ -291,6 +291,8 @@ pub enum Token {
     Indent,
     Dedent,
     Newline,
+    /// Preserved comment (trivia)
+    Comment(String),
 
     // Keywords
     App,
@@ -556,9 +558,8 @@ impl Token {
             RawToken::Ident(s) => Token::Ident(s),
             RawToken::TypeIdent(s) => Token::TypeIdent(s),
             RawToken::Newline => Token::Newline,
-            RawToken::SingleLineComment | RawToken::MultiLineComment => {
-                unreachable!("Comments are skipped by logos")
-            }
+            RawToken::SingleLineComment(s) => Token::Comment(s),
+            RawToken::MultiLineComment(s) => Token::Comment(s),
         }
     }
 }

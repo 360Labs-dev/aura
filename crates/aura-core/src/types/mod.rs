@@ -32,6 +32,14 @@ pub enum AuraType {
     Action(Vec<AuraType>),
     /// Generic type parameter (e.g., T in fn first[T](list[T]) -> T)
     TypeParam(String),
+    /// Conditional type: if T is subtype of U, resolve to A, else B.
+    /// Like TypeScript's `T extends U ? A : B`
+    Conditional {
+        check: Box<AuraType>,
+        extends: Box<AuraType>,
+        then_type: Box<AuraType>,
+        else_type: Box<AuraType>,
+    },
     /// Type variable (for inference)
     Var(usize),
     /// Error/poison type (for error recovery — propagates without further errors)
@@ -156,6 +164,15 @@ impl AuraType {
                 parts.join(" | ")
             }
             AuraType::TypeParam(name) => name.clone(),
+            AuraType::Conditional { check, extends, then_type, else_type } => {
+                format!(
+                    "{} extends {} ? {} : {}",
+                    check.display_name(),
+                    extends.display_name(),
+                    then_type.display_name(),
+                    else_type.display_name()
+                )
+            }
             AuraType::Var(id) => format!("?T{}", id),
             AuraType::Poison => "<error>".to_string(),
         }
