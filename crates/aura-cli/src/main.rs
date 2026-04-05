@@ -410,7 +410,8 @@ fn load_project_context(path: &str) -> Result<ProjectContext, String> {
                 .and_then(find_project_root)
                 .unwrap_or_else(|| raw_path.to_path_buf())
         } else {
-            resolve_source_directory(raw_path).ok_or_else(|| invalid_project_path_message(raw_path))?
+            resolve_source_directory(raw_path)
+                .ok_or_else(|| invalid_project_path_message(raw_path))?
         }
     } else if path == "." {
         let cwd = std::env::current_dir().map_err(|err| err.to_string())?;
@@ -466,7 +467,12 @@ fn direct_aura_sources(dir: &Path) -> Vec<PathBuf> {
 
     let mut files: Vec<PathBuf> = entries
         .flatten()
-        .filter(|entry| entry.file_type().map(|kind| kind.is_file()).unwrap_or(false))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|kind| kind.is_file())
+                .unwrap_or(false)
+        })
         .map(|entry| entry.path())
         .filter(|path| {
             path.extension()

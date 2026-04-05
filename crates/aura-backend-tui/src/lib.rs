@@ -14,4 +14,4 @@
 
 mod codegen;
 
-pub use codegen::{compile_to_tui, TuiOutput};
+pub use codegen::{TuiOutput, compile_to_tui};

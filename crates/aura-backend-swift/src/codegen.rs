@@ -1066,7 +1066,11 @@ app Test
       segmented filter options: [\"All\", \"Active\", \"Done\"]",
         );
         assert!(output.swift.contains("Picker(\"\", selection: $filter)"));
-        assert!(output.swift.contains("ForEach([\"All\", \"Active\", \"Done\"], id: \\.self)"));
+        assert!(
+            output
+                .swift
+                .contains("ForEach([\"All\", \"Active\", \"Done\"], id: \\.self)")
+        );
         assert!(output.swift.contains(".pickerStyle(.segmented)"));
     }
 
@@ -1079,9 +1083,11 @@ app Test
     view
       avatar \"https://example.com/avatar.png\" .circle",
         );
-        assert!(output
-            .swift
-            .contains("AsyncImage(url: URL(string: \"https://example.com/avatar.png\"))"));
+        assert!(
+            output
+                .swift
+                .contains("AsyncImage(url: URL(string: \"https://example.com/avatar.png\"))")
+        );
         assert!(output.swift.contains(".clipShape(Circle())"));
     }
 }

@@ -1,7 +1,7 @@
 //! WinUI codegen: HIR → C# + XAML
 
-use aura_core::hir::*;
 use aura_core::design;
+use aura_core::hir::*;
 
 pub struct WinUiOutput {
     pub xaml: String,
@@ -30,17 +30,26 @@ struct WinUiCodegen<'a> {
 
 impl<'a> WinUiCodegen<'a> {
     fn new(module: &'a HIRModule) -> Self {
-        Self { module, xaml: String::new(), cs: String::new(), indent: 0 }
+        Self {
+            module,
+            xaml: String::new(),
+            cs: String::new(),
+            indent: 0,
+        }
     }
 
     fn xline(&mut self, text: &str) {
-        for _ in 0..self.indent { self.xaml.push_str("    "); }
+        for _ in 0..self.indent {
+            self.xaml.push_str("    ");
+        }
         self.xaml.push_str(text);
         self.xaml.push('\n');
     }
 
     fn cline(&mut self, text: &str) {
-        for _ in 0..self.indent { self.cs.push_str("    "); }
+        for _ in 0..self.indent {
+            self.cs.push_str("    ");
+        }
         self.cs.push_str(text);
         self.cs.push('\n');
     }
@@ -76,31 +85,45 @@ impl<'a> WinUiCodegen<'a> {
             HIRView::Column(layout) => {
                 let spacing = self.spacing_val(&layout.design);
                 let padding = self.padding_val(&layout.design);
-                self.xline(&format!("<StackPanel Orientation=\"Vertical\" Spacing=\"{}\" Padding=\"{}\">", spacing, padding));
+                self.xline(&format!(
+                    "<StackPanel Orientation=\"Vertical\" Spacing=\"{}\" Padding=\"{}\">",
+                    spacing, padding
+                ));
                 self.indent += 1;
-                for child in &layout.children { self.emit_view_xaml(child); }
+                for child in &layout.children {
+                    self.emit_view_xaml(child);
+                }
                 self.indent -= 1;
                 self.xline("</StackPanel>");
             }
             HIRView::Row(layout) => {
                 let spacing = self.spacing_val(&layout.design);
-                self.xline(&format!("<StackPanel Orientation=\"Horizontal\" Spacing=\"{}\">", spacing));
+                self.xline(&format!(
+                    "<StackPanel Orientation=\"Horizontal\" Spacing=\"{}\">",
+                    spacing
+                ));
                 self.indent += 1;
-                for child in &layout.children { self.emit_view_xaml(child); }
+                for child in &layout.children {
+                    self.emit_view_xaml(child);
+                }
                 self.indent -= 1;
                 self.xline("</StackPanel>");
             }
             HIRView::Stack(layout) => {
                 self.xline("<Grid>");
                 self.indent += 1;
-                for child in &layout.children { self.emit_view_xaml(child); }
+                for child in &layout.children {
+                    self.emit_view_xaml(child);
+                }
                 self.indent -= 1;
                 self.xline("</Grid>");
             }
             HIRView::Grid(grid) => {
                 self.xline("<GridView>");
                 self.indent += 1;
-                for child in &grid.children { self.emit_view_xaml(child); }
+                for child in &grid.children {
+                    self.emit_view_xaml(child);
+                }
                 self.indent -= 1;
                 self.xline("</GridView>");
             }
@@ -109,7 +132,9 @@ impl<'a> WinUiCodegen<'a> {
                 self.indent += 1;
                 self.xline("<StackPanel>");
                 self.indent += 1;
-                for child in &scroll.children { self.emit_view_xaml(child); }
+                for child in &scroll.children {
+                    self.emit_view_xaml(child);
+                }
                 self.indent -= 1;
                 self.xline("</StackPanel>");
                 self.indent -= 1;
@@ -123,7 +148,10 @@ impl<'a> WinUiCodegen<'a> {
             HIRView::Heading(heading) => {
                 let content = self.expr_str(&heading.content);
                 let size = match heading.level {
-                    1 => "28", 2 => "24", 3 => "20", _ => "18",
+                    1 => "28",
+                    2 => "24",
+                    3 => "20",
+                    _ => "18",
                 };
                 self.xline(&format!(
                     "<TextBlock Text=\"{}\" FontSize=\"{}\" FontWeight=\"Bold\"/>",
@@ -212,14 +240,21 @@ impl<'a> WinUiCodegen<'a> {
                 self.xline("</ItemsRepeater>");
             }
             HIRView::ComponentRef(comp_ref) => {
-                if let Some(comp) = self.module.components.iter().find(|c| c.name == comp_ref.name) {
+                if let Some(comp) = self
+                    .module
+                    .components
+                    .iter()
+                    .find(|c| c.name == comp_ref.name)
+                {
                     self.emit_view_xaml(&comp.view);
                 } else {
                     self.xline(&format!("<!-- Component: {} -->", comp_ref.name));
                 }
             }
             HIRView::Group(children) => {
-                for child in children { self.emit_view_xaml(child); }
+                for child in children {
+                    self.emit_view_xaml(child);
+                }
             }
             _ => {
                 self.xline("<!-- Unsupported element -->");
@@ -243,10 +278,17 @@ impl<'a> WinUiCodegen<'a> {
             self.indent += 1;
             for field in &model.fields {
                 let cs_type = self.type_to_cs(&field.field_type);
-                let default = field.default.as_ref()
+                let default = field
+                    .default
+                    .as_ref()
                     .map(|d| format!(" = {}", self.expr_to_cs(d)))
                     .unwrap_or_default();
-                self.cline(&format!("public {} {} {{ get; set; }}{};", cs_type, capitalize(&field.name), default));
+                self.cline(&format!(
+                    "public {} {} {{ get; set; }}{};",
+                    cs_type,
+                    capitalize(&field.name),
+                    default
+                ));
             }
             self.indent -= 1;
             self.cline("}");
@@ -264,10 +306,15 @@ impl<'a> WinUiCodegen<'a> {
         if let Some(screen) = self.module.screens.first() {
             for state in &screen.state {
                 let cs_type = self.type_to_cs(&state.state_type);
-                let default = state.initial.as_ref()
+                let default = state
+                    .initial
+                    .as_ref()
                     .map(|d| self.expr_to_cs(d))
                     .unwrap_or_else(|| self.default_cs(&state.state_type));
-                self.cline(&format!("private {} _{} = {};", cs_type, state.name, default));
+                self.cline(&format!(
+                    "private {} _{} = {};",
+                    cs_type, state.name, default
+                ));
                 self.cline(&format!("public {} {}", cs_type, capitalize(&state.name)));
                 self.cline("{");
                 self.indent += 1;
@@ -280,10 +327,16 @@ impl<'a> WinUiCodegen<'a> {
 
             // Actions
             for action in &screen.actions {
-                let params: Vec<String> = action.params.iter()
+                let params: Vec<String> = action
+                    .params
+                    .iter()
                     .map(|p| format!("{} {}", self.type_to_cs(&p.param_type), p.name))
                     .collect();
-                self.cline(&format!("public void {}({})", capitalize(&action.name), params.join(", ")));
+                self.cline(&format!(
+                    "public void {}({})",
+                    capitalize(&action.name),
+                    params.join(", ")
+                ));
                 self.cline("{");
                 self.indent += 1;
                 for stmt in &action.body {
@@ -309,7 +362,11 @@ impl<'a> WinUiCodegen<'a> {
     fn emit_stmt_cs(&mut self, stmt: &HIRStmt) {
         match stmt {
             HIRStmt::Assign(name, value) => {
-                self.cline(&format!("{} = {};", capitalize(name), self.expr_to_cs(value)));
+                self.cline(&format!(
+                    "{} = {};",
+                    capitalize(name),
+                    self.expr_to_cs(value)
+                ));
             }
             HIRStmt::Let(name, _, value) => {
                 self.cline(&format!("var {} = {};", name, self.expr_to_cs(value)));
@@ -354,7 +411,8 @@ impl<'a> WinUiCodegen<'a> {
                 format!("({} {} {})", self.expr_to_cs(l), op_str, self.expr_to_cs(r))
             }
             HIRExpr::Constructor(name, args, _) => {
-                let fields: Vec<String> = args.iter()
+                let fields: Vec<String> = args
+                    .iter()
                     .filter(|(k, _)| k != "_")
                     .map(|(k, v)| format!("{} = {}", capitalize(k), self.expr_to_cs(v)))
                     .collect();
@@ -391,18 +449,30 @@ impl<'a> WinUiCodegen<'a> {
             AuraType::Primitive(PrimitiveType::Int) => "0".to_string(),
             AuraType::Primitive(PrimitiveType::Float) => "0.0".to_string(),
             AuraType::Primitive(PrimitiveType::Bool) => "false".to_string(),
-            AuraType::List(inner) => format!("new ObservableCollection<{}>()", self.type_to_cs(inner)),
+            AuraType::List(inner) => {
+                format!("new ObservableCollection<{}>()", self.type_to_cs(inner))
+            }
             AuraType::Optional(_) => "null".to_string(),
             _ => "null".to_string(),
         }
     }
 
     fn spacing_val(&self, design: &design::ResolvedDesign) -> String {
-        design.spacing.as_ref().and_then(|s| s.gap).map(|g| format!("{}", g)).unwrap_or_else(|| "8".to_string())
+        design
+            .spacing
+            .as_ref()
+            .and_then(|s| s.gap)
+            .map(|g| format!("{}", g))
+            .unwrap_or_else(|| "8".to_string())
     }
 
     fn padding_val(&self, design: &design::ResolvedDesign) -> String {
-        design.spacing.as_ref().and_then(|s| s.padding_top).map(|p| format!("{}", p)).unwrap_or_else(|| "0".to_string())
+        design
+            .spacing
+            .as_ref()
+            .and_then(|s| s.padding_top)
+            .map(|p| format!("{}", p))
+            .unwrap_or_else(|| "0".to_string())
     }
 
     fn text_style_xaml(&self, design: &design::ResolvedDesign) -> String {
@@ -411,9 +481,15 @@ impl<'a> WinUiCodegen<'a> {
             if let Some(size) = typo.size {
                 attrs.push(format!(" FontSize=\"{}\"", (size * 16.0).round()));
             }
-            if typo.weight == Some(700) { attrs.push(" FontWeight=\"Bold\"".to_string()); }
-            if typo.weight == Some(500) { attrs.push(" FontWeight=\"Medium\"".to_string()); }
-            if typo.italic { attrs.push(" FontStyle=\"Italic\"".to_string()); }
+            if typo.weight == Some(700) {
+                attrs.push(" FontWeight=\"Bold\"".to_string());
+            }
+            if typo.weight == Some(500) {
+                attrs.push(" FontWeight=\"Medium\"".to_string());
+            }
+            if typo.italic {
+                attrs.push(" FontStyle=\"Italic\"".to_string());
+            }
         }
         if let Some(ref color) = design.color {
             if let Some(ref fg) = color.foreground {
@@ -445,7 +521,11 @@ impl<'a> WinUiCodegen<'a> {
 
 fn capitalize(s: &str) -> String {
     let mut chars = s.chars();
-    chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default() + chars.as_str()
+    chars
+        .next()
+        .map(|c| c.to_uppercase().to_string())
+        .unwrap_or_default()
+        + chars.as_str()
 }
 
 #[cfg(test)]
@@ -454,14 +534,19 @@ mod tests {
 
     fn compile_source(source: &str) -> WinUiOutput {
         let result = aura_core::parser::parse(source);
-        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Parse errors: {:?}",
+            result.errors
+        );
         let hir = aura_core::hir::build_hir(result.program.as_ref().unwrap());
         compile_to_winui(&hir)
     }
 
     #[test]
     fn test_winui_minimal() {
-        let output = compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
+        let output =
+            compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
         assert!(output.xaml.contains("<Page"));
         assert!(output.xaml.contains("TextBlock"));
         assert!(output.xaml.contains("Hello, Aura!"));
@@ -471,12 +556,14 @@ mod tests {
 
     #[test]
     fn test_winui_state() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state count: int = 0
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(output.cs.contains("private int _count = 0"));
         assert!(output.cs.contains("public int Count"));
         assert!(output.cs.contains("PropertyChanged"));
@@ -484,14 +571,16 @@ app Test
 
     #[test]
     fn test_winui_model() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   model Todo
     title: text
     done: bool = false
   screen Main
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(output.cs.contains("public class Todo"));
         assert!(output.cs.contains("public string Title"));
         assert!(output.cs.contains("public bool Done"));
@@ -499,43 +588,57 @@ app Test
 
     #[test]
     fn test_winui_layout() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       column gap.md padding.lg
         row gap.sm
           text \"A\"
-          text \"B\"");
+          text \"B\"",
+        );
         assert!(output.xaml.contains("StackPanel Orientation=\"Vertical\""));
-        assert!(output.xaml.contains("StackPanel Orientation=\"Horizontal\""));
+        assert!(
+            output
+                .xaml
+                .contains("StackPanel Orientation=\"Horizontal\"")
+        );
         assert!(output.xaml.contains("Spacing=\"8\""));
     }
 
     #[test]
     fn test_winui_button() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       button \"Save\" .accent -> save()
     action save
-      return");
+      return",
+        );
         assert!(output.xaml.contains("Button Content=\"Save\""));
         assert!(output.cs.contains("public void Save()"));
     }
 
     #[test]
     fn test_winui_inputs() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state q: text = \"\"
     state dark: bool = false
     view
       textfield q placeholder: \"Search...\"
-      toggle dark label: \"Dark Mode\"");
-        assert!(output.xaml.contains("TextBox PlaceholderText=\"Search...\""));
+      toggle dark label: \"Dark Mode\"",
+        );
+        assert!(
+            output
+                .xaml
+                .contains("TextBox PlaceholderText=\"Search...\"")
+        );
         assert!(output.xaml.contains("ToggleSwitch Header=\"Dark Mode\""));
     }
 }

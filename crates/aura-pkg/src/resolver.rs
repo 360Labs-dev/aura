@@ -127,8 +127,12 @@ mod tests {
         let installed = vec![PackageManifest {
             name: "@aura/charts".to_string(),
             version: "1.2.3".to_string(),
-            description: None, author: None, license: None,
-            repository: None, dependencies: HashMap::new(), hash: None,
+            description: None,
+            author: None,
+            license: None,
+            repository: None,
+            dependencies: HashMap::new(),
+            hash: None,
         }];
         let plan = resolve_dependencies(&reqs, &installed);
         assert!(plan.install.is_empty());

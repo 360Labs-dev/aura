@@ -39,7 +39,9 @@ impl Package {
         let config: aura_core::config::AuraConfig = toml::from_str(&content).ok()?;
 
         let name = config.app_name(dir);
-        let version = config.app.as_ref()
+        let version = config
+            .app
+            .as_ref()
             .and_then(|a| a.version.clone())
             .unwrap_or_else(|| "0.0.0".to_string());
 
@@ -48,7 +50,12 @@ impl Package {
         let source_files = if src_dir.exists() {
             find_aura_files(&src_dir)
                 .iter()
-                .map(|p| p.strip_prefix(dir).unwrap_or(p).to_string_lossy().to_string())
+                .map(|p| {
+                    p.strip_prefix(dir)
+                        .unwrap_or(p)
+                        .to_string_lossy()
+                        .to_string()
+                })
                 .collect()
         } else {
             Vec::new()
@@ -105,11 +112,15 @@ impl Package {
 
         let dest = Self::packages_dir(project_root).join(&pkg.manifest.name);
         if dest.exists() {
-            return Err(format!("Package '{}' already installed. Use `aura pkg update` to update.", pkg.manifest.name));
+            return Err(format!(
+                "Package '{}' already installed. Use `aura pkg update` to update.",
+                pkg.manifest.name
+            ));
         }
 
         // Copy package files
-        std::fs::create_dir_all(&dest).map_err(|e| format!("Failed to create package dir: {}", e))?;
+        std::fs::create_dir_all(&dest)
+            .map_err(|e| format!("Failed to create package dir: {}", e))?;
         copy_dir(source_path, &dest).map_err(|e| format!("Failed to copy package: {}", e))?;
 
         Ok(Package::load(&dest).unwrap_or(pkg))
@@ -130,13 +141,19 @@ impl Package {
             .ok_or_else(|| "No aura.toml found. Run `aura init` first.".to_string())?;
 
         let name = config.app_name(project_root);
-        let version = config.app.as_ref()
+        let version = config
+            .app
+            .as_ref()
             .and_then(|a| a.version.clone())
             .unwrap_or_else(|| "0.1.0".to_string());
 
         // Hash all source files for integrity
         let src_dir = project_root.join("src");
-        let files = if src_dir.exists() { find_aura_files(&src_dir) } else { Vec::new() };
+        let files = if src_dir.exists() {
+            find_aura_files(&src_dir)
+        } else {
+            Vec::new()
+        };
         let mut hash_input = String::new();
         for file in &files {
             if let Ok(content) = std::fs::read_to_string(file) {

@@ -16,4 +16,4 @@ mod registry;
 mod resolver;
 
 pub use registry::{Package, PackageManifest};
-pub use resolver::{resolve_dependencies, InstallPlan};
+pub use resolver::{InstallPlan, resolve_dependencies};

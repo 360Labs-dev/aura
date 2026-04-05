@@ -786,14 +786,18 @@ input[type="range"]::-webkit-slider-thumb {
             .push_str("  const app = document.getElementById('app');\n");
         self.js.push_str("  if (!app) return;\n");
         self.js.push_str("  // Save focused element\n");
-        self.js.push_str("  const focused = document.activeElement;\n");
-        self.js.push_str("  const focusedBind = focused?.dataset?.bind;\n");
-        self.js.push_str("  const focusedPos = focused?.selectionStart;\n");
+        self.js
+            .push_str("  const focused = document.activeElement;\n");
+        self.js
+            .push_str("  const focusedBind = focused?.dataset?.bind;\n");
+        self.js
+            .push_str("  const focusedPos = focused?.selectionStart;\n");
         self.js.push_str("  app.innerHTML = renderView();\n");
         self.js.push_str("  _bindEvents();\n");
         self.js.push_str("  // Restore focus\n");
         self.js.push_str("  if (focusedBind) {\n");
-        self.js.push_str("    const el = document.querySelector(`[data-bind=\"${focusedBind}\"]`);\n");
+        self.js
+            .push_str("    const el = document.querySelector(`[data-bind=\"${focusedBind}\"]`);\n");
         self.js.push_str("    if (el) { el.focus(); if (focusedPos != null) try { el.setSelectionRange(focusedPos, focusedPos); } catch(e) {} }\n");
         self.js.push_str("  }\n");
         self.js.push_str("}\n\n");
@@ -1361,14 +1365,19 @@ input[type="range"]::-webkit-slider-thumb {
                         if ch == '{' {
                             let mut var_name = String::new();
                             while let Some(&c) = chars.peek() {
-                                if c == '}' { chars.next(); break; }
+                                if c == '}' {
+                                    chars.next();
+                                    break;
+                                }
                                 var_name.push(c);
                                 chars.next();
                             }
                             // Resolve the variable
                             let parts: Vec<&str> = var_name.split('.').collect();
                             let first = parts[0];
-                            let js_var = if self.local_vars.contains(&first.to_string()) || !self.is_state_var(first) {
+                            let js_var = if self.local_vars.contains(&first.to_string())
+                                || !self.is_state_var(first)
+                            {
                                 var_name.clone()
                             } else {
                                 format!("state.{}", var_name)
@@ -1777,7 +1786,9 @@ app Test
       todos = todos.remove(todo)",
         );
         assert!(
-            output.js.contains("_registerAction(() => { remove(todo) })"),
+            output
+                .js
+                .contains("_registerAction(() => { remove(todo) })"),
             "Expected loop action to capture local todo value"
         );
         assert!(

@@ -421,7 +421,10 @@ impl<'a> ComposeCodegen<'a> {
                 ));
                 self.line("SingleChoiceSegmentedButtonRow {");
                 self.indent += 1;
-                self.line(&format!("{}.forEachIndexed {{ index, option ->", options_name));
+                self.line(&format!(
+                    "{}.forEachIndexed {{ index, option ->",
+                    options_name
+                ));
                 self.indent += 1;
                 self.line(&format!(
                     "SegmentedButton(selected = {} == option, onClick = {{ {} = option }}, shape = SegmentedButtonDefaults.itemShape(index = index, count = {}.size)) {{",
@@ -869,9 +872,17 @@ app Test
     view
       segmented filter options: [\"All\", \"Active\", \"Done\"]",
         );
-        assert!(output.kotlin.contains("val filterOptions = listOf(\"All\", \"Active\", \"Done\")"));
+        assert!(
+            output
+                .kotlin
+                .contains("val filterOptions = listOf(\"All\", \"Active\", \"Done\")")
+        );
         assert!(output.kotlin.contains("SingleChoiceSegmentedButtonRow"));
-        assert!(output.kotlin.contains("SegmentedButton(selected = filter == option"));
+        assert!(
+            output
+                .kotlin
+                .contains("SegmentedButton(selected = filter == option")
+        );
     }
 
     #[test]
@@ -883,9 +894,15 @@ app Test
     view
       avatar \"https://example.com/avatar.png\" .circle",
         );
-        assert!(output.kotlin.contains("Box(modifier = Modifier.size(48.dp))"));
-        assert!(output
-            .kotlin
-            .contains("Text(text = \"https://example.com/avatar.png\".toString(), maxLines = 1)"));
+        assert!(
+            output
+                .kotlin
+                .contains("Box(modifier = Modifier.size(48.dp))")
+        );
+        assert!(
+            output.kotlin.contains(
+                "Text(text = \"https://example.com/avatar.png\".toString(), maxLines = 1)"
+            )
+        );
     }
 }

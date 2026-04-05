@@ -65,7 +65,11 @@ impl AgentServer {
     // === Method handlers ===
 
     fn handle_ast_get(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
-        if params.get("path").and_then(|value| value.as_str()).is_some() {
+        if params
+            .get("path")
+            .and_then(|value| value.as_str())
+            .is_some()
+        {
             let loaded = match load_project(params) {
                 Ok(loaded) => loaded,
                 Err(message) => return Response::error(id.clone(), -32602, message),
@@ -110,12 +114,17 @@ impl AgentServer {
     }
 
     fn handle_diagnostics(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
-        let diagnostics = if params.get("path").and_then(|value| value.as_str()).is_some() {
+        let diagnostics = if params
+            .get("path")
+            .and_then(|value| value.as_str())
+            .is_some()
+        {
             let loaded = match load_project(params) {
                 Ok(loaded) => loaded,
                 Err(message) => return Response::error(id.clone(), -32602, message),
             };
-            let analysis = aura_core::semantic::SemanticAnalyzer::new().analyze(&loaded.project.program);
+            let analysis =
+                aura_core::semantic::SemanticAnalyzer::new().analyze(&loaded.project.program);
             let mut diagnostics = Vec::new();
 
             for file in &loaded.project.files {
@@ -124,11 +133,12 @@ impl AgentServer {
                     Err(_) => continue,
                 };
                 let parse_result = aura_core::parser::parse(&source);
-                diagnostics.extend(parse_result.errors.iter().map(|err| diagnostic_from_error(
-                    err,
-                    &source,
-                    Some(file.path.as_str()),
-                )));
+                diagnostics.extend(
+                    parse_result
+                        .errors
+                        .iter()
+                        .map(|err| diagnostic_from_error(err, &source, Some(file.path.as_str()))),
+                );
             }
 
             diagnostics.extend(analysis.errors.iter().map(|err| {
@@ -322,7 +332,11 @@ impl AgentServer {
     }
 
     fn handle_hir_get(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
-        if params.get("path").and_then(|value| value.as_str()).is_some() {
+        if params
+            .get("path")
+            .and_then(|value| value.as_str())
+            .is_some()
+        {
             let loaded = match load_project(params) {
                 Ok(loaded) => loaded,
                 Err(message) => return Response::error(id.clone(), -32602, message),
@@ -401,7 +415,11 @@ impl AgentServer {
     }
 
     fn handle_explain(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
-        if params.get("path").and_then(|value| value.as_str()).is_some() {
+        if params
+            .get("path")
+            .and_then(|value| value.as_str())
+            .is_some()
+        {
             let loaded = match load_project(params) {
                 Ok(loaded) => loaded,
                 Err(message) => return Response::error(id.clone(), -32602, message),
@@ -546,10 +564,11 @@ impl AgentServer {
             for token in &lex_result.tokens {
                 if token.span.start <= byte_offset && byte_offset < token.span.end {
                     if let aura_core::lexer::Token::Ident(name)
-                        | aura_core::lexer::Token::TypeIdent(name) = &token.value
+                    | aura_core::lexer::Token::TypeIdent(name) = &token.value
                     {
                         if let Some(sym) = analysis.symbols.lookup(0, name) {
-                            let (def_line, def_col) = byte_to_line_col(&loaded.source, sym.span.start);
+                            let (def_line, def_col) =
+                                byte_to_line_col(&loaded.source, sym.span.start);
                             return Response::success(
                                 id.clone(),
                                 json!({
@@ -964,7 +983,9 @@ mod tests {
         assert!(result["summary"]["errors"].as_u64().unwrap() >= 1);
         let diagnostics = result["diagnostics"].as_array().unwrap();
         assert!(
-            diagnostics.iter().any(|diag| diag["location"]["file"] == file.display().to_string()),
+            diagnostics
+                .iter()
+                .any(|diag| diag["location"]["file"] == file.display().to_string()),
             "Expected file path in diagnostics"
         );
 
