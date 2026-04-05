@@ -46,6 +46,15 @@ pub fn sketch(description: &str) -> String {
     if desc.contains("login") || desc.contains("auth") || desc.contains("sign in") {
         return gen_login_app(&app_name, theme);
     }
+    if desc.contains("dashboard") || desc.contains("stats") || desc.contains("analytics") {
+        return gen_dashboard_app(&app_name, theme);
+    }
+    if desc.contains("social") || desc.contains("feed") || desc.contains("posts") {
+        return gen_social_feed_app(&app_name, theme);
+    }
+    if desc.contains("music") || desc.contains("player") || desc.contains("audio") {
+        return gen_music_player_app(&app_name, theme);
+    }
 
     // Default: a hello world with the description as content
     gen_default_app(&app_name, theme, description)
@@ -66,6 +75,9 @@ fn extract_app_name(desc: &str) -> String {
             "settings" => return "SettingsApp".to_string(),
             "gallery" | "photos" => return "GalleryApp".to_string(),
             "login" | "auth" => return "AuthApp".to_string(),
+            "dashboard" | "analytics" => return "DashboardApp".to_string(),
+            "social" | "feed" => return "SocialFeedApp".to_string(),
+            "music" | "player" => return "MusicPlayerApp".to_string(),
             _ => {}
         }
     }
@@ -419,6 +431,208 @@ fn gen_login_app(name: &str, theme: &str) -> String {
     )
 }
 
+fn gen_dashboard_app(name: &str, theme: &str) -> String {
+    format!(
+        r#"app {}
+  theme: {}
+
+  model StatCard
+    label: text
+    value: text
+    trend: text
+
+  screen Main
+    state date: text = "Today"
+    state stats: list[StatCard] = []
+    state revenue: int = 45230
+    state users: int = 1250
+    state orders: int = 342
+
+    view
+      column gap.md padding.lg
+        row align.center justify.space-between
+          heading "Dashboard" size.xl .bold
+          button "Export" .surface -> export()
+        row gap.md
+          button.icon "calendar" title: "Pick Date" -> pickDate()
+          text date .secondary
+        divider .subtle
+        row gap.md
+          column flex:1 padding.md .surface .rounded gap.sm
+            text "Revenue" .muted size.sm
+            text "$45,230" size.xl .bold .accent
+            text "↑ 12% this month" size.xs .info
+          column flex:1 padding.md .surface .rounded gap.sm
+            text "Users" .muted size.sm
+            text "1,250" size.xl .bold .warning
+            text "↑ 8% this week" size.xs .info
+          column flex:1 padding.md .surface .rounded gap.sm
+            text "Orders" .muted size.sm
+            text "342" size.xl .bold
+            text "↑ 23% this month" size.xs .info
+        column padding.md .surface .rounded gap.md
+          text "Sales Chart" .bold
+          box height: 200 .background
+            text "Chart placeholder" .muted align.center
+        column padding.md .surface .rounded gap.sm
+          text "Recent Activity" .bold .medium
+          each stats as item
+            row padding.xs justify.space-between
+              text item.label .secondary
+              text item.value
+
+    action export
+      return
+
+    action pickDate
+      date = "Custom Date"
+"#,
+        name, theme
+    )
+}
+
+fn gen_social_feed_app(name: &str, theme: &str) -> String {
+    format!(
+        r#"app {}
+  theme: {}
+
+  model Post
+    author: text
+    avatar: text
+    content: text
+    likes: int = 0
+    comments: int = 0
+    timestamp: timestamp
+
+  screen Main
+    state posts: list[Post] = []
+    state newPost: text = ""
+
+    view
+      column gap.md padding.lg
+        heading "Social Feed" size.xl .bold
+        row gap.sm
+          textfield newPost placeholder: "What's on your mind?" width.fill
+          button.icon "paperplane" .accent -> postMessage() -> clearField()
+        divider .subtle
+        scroll
+          column gap.md
+            each posts as post
+              column padding.md .surface .rounded gap.sm
+                row gap.sm align.start
+                  avatar post.avatar size.md .circle
+                  column flex:1 gap.xs
+                    row gap.sm
+                      text post.author .bold
+                      text post.timestamp size.xs .muted
+                    text post.content .medium
+                divider .subtle
+                row gap.lg padding.top.sm .muted
+                  button.slim
+                    icon.inline "heart" size.sm
+                    text post.likes.toString() size.sm
+                    -> likePost(post)
+                  button.slim
+                    icon.inline "chat.bubble" size.sm
+                    text post.comments.toString() size.sm
+                    -> replyPost(post)
+                  button.slim
+                    icon.inline "paperplane" size.sm
+                    text "Share" size.sm
+                    -> sharePost(post)
+        if posts.isEmpty
+          column align.center padding.2xl gap.md
+            icon "note.text" size.2xl .muted
+            text "No posts yet" .muted
+            button "Create a post" .accent .pill -> postMessage()
+
+    action postMessage
+      posts = posts.append(Post(author: "You", avatar: "me.jpg", content: newPost))
+
+    action clearField
+      newPost = ""
+
+    action likePost(post: Post)
+      return
+
+    action replyPost(post: Post)
+      return
+
+    action sharePost(post: Post)
+      return
+"#,
+        name, theme
+    )
+}
+
+fn gen_music_player_app(name: &str, theme: &str) -> String {
+    format!(
+        r#"app {}
+  theme: {}
+
+  screen Main
+    state playing: bool = false
+    state progress: int = 35
+    state duration: int = 240
+    state track: text = "Midnight Dreams"
+    state artist: text = "Luna Eclipse"
+    state volume: int = 75
+
+    view
+      column gap.xl padding.2xl align.center
+        box height: 280 width.fill .background .rounded
+          image "album-art.jpg" .fill
+            text "Album Art" .muted align.center
+        column gap.xs align.center
+          text track size.xl .bold
+          text artist .secondary
+        column width.fill gap.sm
+          row gap.sm align.center
+            text "0:35" size.xs .muted
+            slider progress min: 0 max: 240 step: 1 width.fill
+            text "4:00" size.xs .muted
+        column gap.md width.fill padding.md gap.md
+          row align.center
+            text "Volume" size.sm .muted
+            slider volume min: 0 max: 100 step: 1 flex:1
+            text volume.toString() size.xs .muted
+        row gap.md justify.center
+          button.icon "shuffle" .surface -> toggleShuffle()
+          button.icon "arrow.counterclockwise" .surface -> previous()
+          if playing
+            button.icon "pause.fill" size.2xl .accent -> pause()
+          else
+            button.icon "play.fill" size.2xl .accent -> play()
+          button.icon "arrow.clockwise" .surface -> next()
+          button.icon "repeat" .surface -> toggleRepeat()
+        row gap.md padding.top.md
+          button "Add to Playlist" .surface .pill width.fill -> addToPlaylist()
+
+    action play
+      playing = true
+
+    action pause
+      playing = false
+
+    action next
+      progress = progress + 30
+
+    action previous
+      progress = if progress > 30 then progress - 30 else 0
+
+    action toggleShuffle
+      return
+
+    action toggleRepeat
+      return
+
+    action addToPlaylist
+      return
+"#,
+        name, theme
+    )
+}
+
 fn gen_default_app(name: &str, theme: &str, description: &str) -> String {
     format!(
         r#"app {}
@@ -489,6 +703,9 @@ mod tests {
             "settings",
             "photo gallery",
             "login screen",
+            "dashboard with analytics",
+            "social feed",
+            "music player",
             "something random",
         ];
         for desc in descriptions {
