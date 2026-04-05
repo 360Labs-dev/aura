@@ -23,6 +23,8 @@ struct WebCodegen<'a> {
     js: String,
     indent: usize,
     component_counter: usize,
+    /// Variables that are loop-scoped (not state-scoped).
+    local_vars: Vec<String>,
 }
 
 impl<'a> WebCodegen<'a> {
@@ -32,6 +34,7 @@ impl<'a> WebCodegen<'a> {
             html: String::new(),
             css: String::new(),
             js: String::new(),
+            local_vars: Vec::new(),
             indent: 0,
             component_counter: 0,
         }
@@ -668,6 +671,29 @@ input[type="range"]::-webkit-slider-thumb {
         self.js.push_str("`;\n");
         self.js.push_str("}\n\n");
 
+        // Icon name to emoji mapping
+        self.js.push_str("const _icons = {");
+        self.js.push_str("'arrow.up':'\u{2B06}\u{FE0F}','arrow.up.circle.fill':'\u{2B06}\u{FE0F}',");
+        self.js.push_str("'trash':'\u{1F5D1}','trash.fill':'\u{1F5D1}',");
+        self.js.push_str("'plus':'+','plus.circle':'+','minus':'\u{2212}',");
+        self.js.push_str("'star':'\u{2B50}','star.fill':'\u{2B50}',");
+        self.js.push_str("'heart':'\u{2764}\u{FE0F}','heart.fill':'\u{2764}\u{FE0F}',");
+        self.js.push_str("'checkmark':'\u{2705}','checkmark.circle':'\u{2705}',");
+        self.js.push_str("'xmark':'\u{274C}','magnifyingglass':'\u{1F50D}',");
+        self.js.push_str("'gear':'\u{2699}\u{FE0F}','person':'\u{1F464}',");
+        self.js.push_str("'house':'\u{1F3E0}','bell':'\u{1F514}',");
+        self.js.push_str("'camera':'\u{1F4F7}','photo':'\u{1F5BC}\u{FE0F}',");
+        self.js.push_str("'sun.max':'\u{2600}\u{FE0F}','cloud':'\u{2601}\u{FE0F}',");
+        self.js.push_str("'cloud.rain':'\u{1F327}\u{FE0F}','cloud.snow':'\u{1F328}\u{FE0F}',");
+        self.js.push_str("'drop':'\u{1F4A7}','wind':'\u{1F4A8}',");
+        self.js.push_str("'lock.circle':'\u{1F512}','lock':'\u{1F512}',");
+        self.js.push_str("'phone':'\u{1F4DE}','video':'\u{1F4F9}','mic':'\u{1F3A4}',");
+        self.js.push_str("'cart':'\u{1F6D2}','inbox':'\u{1F4E5}',");
+        self.js.push_str("'square.and.pencil':'\u{270F}\u{FE0F}',");
+        self.js.push_str("'bubble.left.and.bubble.right':'\u{1F4AC}',");
+        self.js.push_str("};\n");
+        self.js.push_str("function _icon(n) { return _icons[n] || n; }\n\n");
+
         // Event binding after render
         self.js.push_str("function _bindEvents() {\n");
         self.js.push_str("  // Bind input elements to state\n");
@@ -688,7 +714,7 @@ input[type="range"]::-webkit-slider-thumb {
     }
 
     /// Generate a JS template literal for a view tree.
-    fn view_to_js_template(&self, view: &HIRView, depth: usize) -> String {
+    fn view_to_js_template(&mut self, view: &HIRView, depth: usize) -> String {
         let pad = "    ".repeat(depth);
         match view {
             HIRView::Column(layout) => {
@@ -725,7 +751,7 @@ input[type="range"]::-webkit-slider-thumb {
                 format!("{}<{} class=\"aura-heading{}\"{}>{}</{}>\n", pad, tag, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, if style.is_empty() { String::new() } else { format!(" style=\"{}\"", style) }, content, tag)
             }
             HIRView::Button(button) => {
-                let label = self.expr_to_js_template(&button.label);
+                let raw_label = self.expr_to_js_template(&button.label);
                 let onclick = self.action_to_js(&button.action);
                 let style_class = match button.style {
                     ButtonStyle::Icon => " icon",
@@ -734,6 +760,12 @@ input[type="range"]::-webkit-slider-thumb {
                     _ => "",
                 };
                 let cls = self.design_classes(&button.design);
+                // For icon buttons, wrap label in _icon() for emoji conversion
+                let label = if button.style == ButtonStyle::Icon {
+                    format!("${{_icon('{}')}}", raw_label)
+                } else {
+                    raw_label
+                };
                 format!("{}<button class=\"aura-button{}{}\" onclick=\"{}\">{}</button>\n", pad, style_class, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, onclick, label)
             }
             HIRView::TextField(field) => {
@@ -754,7 +786,7 @@ input[type="range"]::-webkit-slider-thumb {
             HIRView::Icon(icon) => {
                 let name = self.expr_to_js_template(&icon.name);
                 let cls = self.design_classes(&icon.design);
-                format!("{}<span class=\"aura-icon{}\">{}</span>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, name)
+                format!("{}<span class=\"aura-icon{}\">${{_icon('{}')}}</span>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, name)
             }
             HIRView::Badge(badge) => {
                 let content = self.expr_to_js_template(&badge.content);
@@ -768,7 +800,10 @@ input[type="range"]::-webkit-slider-thumb {
             }
             HIRView::Each(each) => {
                 let iterable = self.expr_to_js(&each.iterable);
+                // Register loop variable so expr_to_js doesn't prefix with state.
+                self.local_vars.push(each.item_name.clone());
                 let item_template = self.view_to_js_template(&each.body, depth + 1);
+                self.local_vars.pop();
                 format!("${{{}.map({} => `{}`).join('')}}", iterable, each.item_name, item_template.trim().replace('`', "\\`"))
             }
             HIRView::ComponentRef(comp_ref) => {
@@ -807,8 +842,14 @@ input[type="range"]::-webkit-slider-thumb {
                     s.clone()
                 }
             }
-            HIRExpr::IntLit(n) => format!("${{state.{}}}", n), // shouldn't happen but safe
-            HIRExpr::Var(name, _) => format!("${{state.{}}}", name),
+            HIRExpr::IntLit(n) => n.to_string(),
+            HIRExpr::Var(name, _) => {
+                if self.local_vars.contains(name) {
+                    format!("${{{}}}", name)
+                } else {
+                    format!("${{state.{}}}", name)
+                }
+            }
             HIRExpr::MemberAccess(obj, member, _) => {
                 format!("${{{}.{}}}", self.expr_to_js(obj), member)
             }
@@ -952,7 +993,13 @@ input[type="range"]::-webkit-slider-thumb {
             HIRExpr::FloatLit(f) => f.to_string(),
             HIRExpr::BoolLit(b) => b.to_string(),
             HIRExpr::Nil => "null".to_string(),
-            HIRExpr::Var(name, _) => format!("state.{}", name),
+            HIRExpr::Var(name, _) => {
+                if self.local_vars.contains(name) {
+                    name.clone()
+                } else {
+                    format!("state.{}", name)
+                }
+            }
             HIRExpr::MemberAccess(obj, member, _) => {
                 format!("{}.{}", self.expr_to_js(obj), member)
             }
@@ -990,6 +1037,11 @@ input[type="range"]::-webkit-slider-thumb {
                 }
             }
             HIRExpr::Constructor(name, args, _) => {
+                // Handle built-in collection constructors
+                if name == "list" {
+                    let items: Vec<String> = args.iter().map(|(_, v)| self.expr_to_js(v)).collect();
+                    return format!("[{}]", items.join(", "));
+                }
                 let fields: Vec<String> = args
                     .iter()
                     .filter(|(k, _)| k != "_")
@@ -1037,6 +1089,44 @@ input[type="range"]::-webkit-slider-thumb {
             }
             HIRStmt::Expr(expr) => self.expr_to_js(expr),
             _ => "/* unsupported statement */".to_string(),
+        }
+    }
+
+    fn icon_to_emoji(&self, name: &str) -> String {
+        match name {
+            "arrow.up" | "arrow.up.circle.fill" => "\u{2B06}\u{FE0F}".to_string(),
+            "arrow.down" => "\u{2B07}\u{FE0F}".to_string(),
+            "chevron.left" | "chevron.right" => "\u{203A}".to_string(),
+            "plus" | "plus.circle" => "+".to_string(),
+            "minus" | "minus.circle" => "\u{2212}".to_string(),
+            "trash" | "trash.fill" => "\u{1F5D1}".to_string(),
+            "star" | "star.fill" => "\u{2B50}".to_string(),
+            "heart" | "heart.fill" => "\u{2764}\u{FE0F}".to_string(),
+            "checkmark" | "checkmark.circle" | "checkmark.circle.fill" => "\u{2705}".to_string(),
+            "xmark" | "xmark.circle" => "\u{274C}".to_string(),
+            "magnifyingglass" => "\u{1F50D}".to_string(),
+            "gear" | "gearshape" => "\u{2699}\u{FE0F}".to_string(),
+            "person" | "person.circle" => "\u{1F464}".to_string(),
+            "house" | "house.fill" => "\u{1F3E0}".to_string(),
+            "bell" | "bell.fill" => "\u{1F514}".to_string(),
+            "camera" | "camera.fill" => "\u{1F4F7}".to_string(),
+            "photo" | "photo.fill" => "\u{1F5BC}\u{FE0F}".to_string(),
+            "sun.max" | "sun.max.fill" => "\u{2600}\u{FE0F}".to_string(),
+            "cloud" | "cloud.fill" => "\u{2601}\u{FE0F}".to_string(),
+            "cloud.rain" => "\u{1F327}\u{FE0F}".to_string(),
+            "cloud.snow" => "\u{1F328}\u{FE0F}".to_string(),
+            "cloud.bolt" => "\u{26C8}\u{FE0F}".to_string(),
+            "drop" | "drop.fill" => "\u{1F4A7}".to_string(),
+            "wind" => "\u{1F4A8}".to_string(),
+            "lock.circle" | "lock" | "lock.fill" => "\u{1F512}".to_string(),
+            "phone" | "phone.fill" => "\u{1F4DE}".to_string(),
+            "video" | "video.fill" => "\u{1F4F9}".to_string(),
+            "mic" | "mic.fill" => "\u{1F3A4}".to_string(),
+            "square.and.pencil" => "\u{270F}\u{FE0F}".to_string(),
+            "bubble.left.and.bubble.right" => "\u{1F4AC}".to_string(),
+            "cart" | "cart.fill" => "\u{1F6D2}".to_string(),
+            "inbox" => "\u{1F4E5}".to_string(),
+            _ => name.to_string(),
         }
     }
 

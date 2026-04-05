@@ -53,13 +53,16 @@ function renderView() {
                 <div class="aura-row" style="">
                     <span class="aura-text">${"Language".medium}</span>
                     <div class="aura-spacer"></div>
-                    <span class="aura-text">${state.language.secondary}</span>
+                    <span class="aura-text color-secondary">${state.language}</span>
                 </div>
             </div>
             <button class="aura-button" onclick="signOut()">Sign Out</button>
         </div>
 `;
 }
+
+const _icons = {'arrow.up':'⬆️','arrow.up.circle.fill':'⬆️','trash':'🗑','trash.fill':'🗑','plus':'+','plus.circle':'+','minus':'−','star':'⭐','star.fill':'⭐','heart':'❤️','heart.fill':'❤️','checkmark':'✅','checkmark.circle':'✅','xmark':'❌','magnifyingglass':'🔍','gear':'⚙️','person':'👤','house':'🏠','bell':'🔔','camera':'📷','photo':'🖼️','sun.max':'☀️','cloud':'☁️','cloud.rain':'🌧️','cloud.snow':'🌨️','drop':'💧','wind':'💨','lock.circle':'🔒','lock':'🔒','phone':'📞','video':'📹','mic':'🎤','cart':'🛒','inbox':'📥','square.and.pencil':'✏️','bubble.left.and.bubble.right':'💬',};
+function _icon(n) { return _icons[n] || n; }
 
 function _bindEvents() {
   // Bind input elements to state

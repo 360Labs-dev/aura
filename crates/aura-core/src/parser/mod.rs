@@ -2180,7 +2180,7 @@ fn is_unambiguous_design_token(name: &str) -> bool {
         "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl"
             | "bold" | "semibold" | "italic" | "mono" | "underline" | "strike"
             | "uppercase" | "lowercase" | "capitalize"
-            | "accent" | "danger" | "warning" | "success" | "info" | "muted"
+            | "accent" | "danger" | "warning" | "success" | "info" | "muted" | "secondary"
             | "rounded" | "smooth" | "pill" | "circle" | "sharp" | "subtle"
             | "ease" | "spring" | "bounce" | "indeterminate"
             | "fill" | "fit"

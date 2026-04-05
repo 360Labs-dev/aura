@@ -2,7 +2,7 @@
 'use strict';
 
 const _state = {
-  photos: list({  }),
+  photos: [],
 };
 
 const state = new Proxy(_state, {
@@ -38,17 +38,20 @@ function renderView() {
             <div class="aura-row" style="">
                 <h1 class="aura-heading">Gallery</h1>
                 <div class="aura-spacer"></div>
-                <button class="aura-button icon color-accent" onclick="addPhoto()">camera</button>
+                <button class="aura-button icon color-accent" onclick="addPhoto()">${_icon('camera')}</button>
             </div>
             <div class="aura-grid">
 ${state.photos.map(photo => `<!-- unsupported -->`).join('')}            </div>
 ${(state.photos.isEmpty) ? `<div class="aura-column" style="gap: 8px; padding: 32px">
-                <span class="aura-icon">photo</span>
+                <span class="aura-icon">${_icon('photo')}</span>
                 <span class="aura-text color-muted">No photos yet</span>
                 <button class="aura-button" onclick="addPhoto()">Take Photo</button>
             </div>` : ``}        </div>
 `;
 }
+
+const _icons = {'arrow.up':'⬆️','arrow.up.circle.fill':'⬆️','trash':'🗑','trash.fill':'🗑','plus':'+','plus.circle':'+','minus':'−','star':'⭐','star.fill':'⭐','heart':'❤️','heart.fill':'❤️','checkmark':'✅','checkmark.circle':'✅','xmark':'❌','magnifyingglass':'🔍','gear':'⚙️','person':'👤','house':'🏠','bell':'🔔','camera':'📷','photo':'🖼️','sun.max':'☀️','cloud':'☁️','cloud.rain':'🌧️','cloud.snow':'🌨️','drop':'💧','wind':'💨','lock.circle':'🔒','lock':'🔒','phone':'📞','video':'📹','mic':'🎤','cart':'🛒','inbox':'📥','square.and.pencil':'✏️','bubble.left.and.bubble.right':'💬',};
+function _icon(n) { return _icons[n] || n; }
 
 function _bindEvents() {
   // Bind input elements to state

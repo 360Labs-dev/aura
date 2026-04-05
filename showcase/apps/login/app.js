@@ -44,9 +44,9 @@ function render() {
 function renderView() {
   return `
         <div class="aura-column" style="gap: 16px; padding: 32px">
-            <span class="aura-icon">lock.circle</span>
+            <span class="aura-icon">${_icon('lock.circle')}</span>
             <h1 class="aura-heading">Welcome Back</h1>
-            <span class="aura-text">${"Sign in to continue".secondary}</span>
+            <span class="aura-text color-secondary">Sign in to continue</span>
             <div class="aura-column" style="gap: 8px">
                 <input class="aura-input" type="text" placeholder="Email address" data-bind="email" value="${state.email || ''}"/>
                 <input class="aura-input" type="text" placeholder="Password" data-bind="password" value="${state.password || ''}"/>
@@ -60,6 +60,9 @@ function renderView() {
         </div>
 `;
 }
+
+const _icons = {'arrow.up':'⬆️','arrow.up.circle.fill':'⬆️','trash':'🗑','trash.fill':'🗑','plus':'+','plus.circle':'+','minus':'−','star':'⭐','star.fill':'⭐','heart':'❤️','heart.fill':'❤️','checkmark':'✅','checkmark.circle':'✅','xmark':'❌','magnifyingglass':'🔍','gear':'⚙️','person':'👤','house':'🏠','bell':'🔔','camera':'📷','photo':'🖼️','sun.max':'☀️','cloud':'☁️','cloud.rain':'🌧️','cloud.snow':'🌨️','drop':'💧','wind':'💨','lock.circle':'🔒','lock':'🔒','phone':'📞','video':'📹','mic':'🎤','cart':'🛒','inbox':'📥','square.and.pencil':'✏️','bubble.left.and.bubble.right':'💬',};
+function _icon(n) { return _icons[n] || n; }
 
 function _bindEvents() {
   // Bind input elements to state

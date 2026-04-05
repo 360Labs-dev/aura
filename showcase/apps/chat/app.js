@@ -2,7 +2,7 @@
 'use strict';
 
 const _state = {
-  messages: list({  }),
+  messages: [],
   input: "",
 };
 
@@ -45,16 +45,19 @@ function renderView() {
             <div class="aura-scroll">
                 <div class="aura-column" style="gap: 4px">
 ${state.messages.map(msg => `<div class="aura-row" style="">
-                            <span class="aura-text">${state.msg.text}</span>
+                            <span class="aura-text">${msg.text}</span>
                         </div>`).join('')}                </div>
             </div>
             <div class="aura-row" style="gap: 4px">
                 <input class="aura-input" type="text" placeholder="Type a message..." data-bind="input" value="${state.input || ''}"/>
-                <button class="aura-button icon color-accent" onclick="sendMessage()">arrow.up</button>
+                <button class="aura-button icon color-accent" onclick="sendMessage()">${_icon('arrow.up')}</button>
             </div>
         </div>
 `;
 }
+
+const _icons = {'arrow.up':'⬆️','arrow.up.circle.fill':'⬆️','trash':'🗑','trash.fill':'🗑','plus':'+','plus.circle':'+','minus':'−','star':'⭐','star.fill':'⭐','heart':'❤️','heart.fill':'❤️','checkmark':'✅','checkmark.circle':'✅','xmark':'❌','magnifyingglass':'🔍','gear':'⚙️','person':'👤','house':'🏠','bell':'🔔','camera':'📷','photo':'🖼️','sun.max':'☀️','cloud':'☁️','cloud.rain':'🌧️','cloud.snow':'🌨️','drop':'💧','wind':'💨','lock.circle':'🔒','lock':'🔒','phone':'📞','video':'📹','mic':'🎤','cart':'🛒','inbox':'📥','square.and.pencil':'✏️','bubble.left.and.bubble.right':'💬',};
+function _icon(n) { return _icons[n] || n; }
 
 function _bindEvents() {
   // Bind input elements to state

@@ -34,31 +34,34 @@ function renderView() {
   return `
         <div class="aura-column" style="gap: 24px; padding: 32px">
             <span class="aura-text">${state.city}</span>
-            <span class="aura-icon">sun.max</span>
+            <span class="aura-icon">${_icon('sun.max')}</span>
             <span class="aura-text">${state.temperature}</span>
-            <span class="aura-text">${state.condition.secondary}</span>
+            <span class="aura-text">${state.condition}</span>
             <hr class="aura-divider"/>
             <h1 class="aura-heading" style="padding-top: 16px">Forecast</h1>
             <div class="aura-row" style="gap: 16px">
                 <div class="aura-column" style="gap: 2px">
                     <span class="aura-text color-muted">Mon</span>
-                    <span class="aura-icon">${"cloud".secondary}</span>
+                    <span class="aura-icon color-secondary">${_icon('cloud')}</span>
                     <span class="aura-text">68</span>
                 </div>
                 <div class="aura-column" style="gap: 2px">
                     <span class="aura-text color-muted">Tue</span>
-                    <span class="aura-icon color-info">cloud.rain</span>
+                    <span class="aura-icon color-info">${_icon('cloud.rain')}</span>
                     <span class="aura-text">62</span>
                 </div>
                 <div class="aura-column" style="gap: 2px">
                     <span class="aura-text color-muted">Wed</span>
-                    <span class="aura-icon color-warning">sun.max</span>
+                    <span class="aura-icon color-warning">${_icon('sun.max')}</span>
                     <span class="aura-text">75</span>
                 </div>
             </div>
         </div>
 `;
 }
+
+const _icons = {'arrow.up':'⬆️','arrow.up.circle.fill':'⬆️','trash':'🗑','trash.fill':'🗑','plus':'+','plus.circle':'+','minus':'−','star':'⭐','star.fill':'⭐','heart':'❤️','heart.fill':'❤️','checkmark':'✅','checkmark.circle':'✅','xmark':'❌','magnifyingglass':'🔍','gear':'⚙️','person':'👤','house':'🏠','bell':'🔔','camera':'📷','photo':'🖼️','sun.max':'☀️','cloud':'☁️','cloud.rain':'🌧️','cloud.snow':'🌨️','drop':'💧','wind':'💨','lock.circle':'🔒','lock':'🔒','phone':'📞','video':'📹','mic':'🎤','cart':'🛒','inbox':'📥','square.and.pencil':'✏️','bubble.left.and.bubble.right':'💬',};
+function _icon(n) { return _icons[n] || n; }
 
 function _bindEvents() {
   // Bind input elements to state
