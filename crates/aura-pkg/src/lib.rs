@@ -1,13 +1,19 @@
 //! # Aura Package Manager
 //!
-//! Package management for Aura projects.
+//! Manages Aura packages: install, publish, resolve dependencies.
 //!
-//! ## Features
-//! - Dependency resolution with version constraints
-//! - Content-addressable storage (SHA-256)
-//! - Mandatory cryptographic signatures (ed25519)
-//! - No build scripts (source-only packages)
-//! - Scoped naming (@publisher/package) to prevent typosquatting
-//! - Offline mode with local cache
+//! ## Package Format
+//! Each package is a directory with `aura.toml` and `src/` containing `.aura` files.
+//! Packages are stored locally in `.aura-packages/` relative to project root.
 //!
-//! Phase 5 implementation.
+//! ## Commands
+//! - `aura pkg install @scope/name` — install from registry or local path
+//! - `aura pkg publish` — pack and publish the current project
+//! - `aura pkg list` — show installed packages
+//! - `aura pkg remove @scope/name` — remove a package
+
+mod registry;
+mod resolver;
+
+pub use registry::{Package, PackageManifest};
+pub use resolver::{resolve_dependencies, InstallPlan};
