@@ -886,7 +886,7 @@ impl HIRBuilder {
                     fields: v.fields.iter().map(|f| (f.name.clone(), self.resolve_ast_type(&f.type_expr))).collect(),
                 }).collect(),
             ),
-            ast::TypeExpr::Function(params, ret, _) => AuraType::Function(crate::types::FunctionType {
+            ast::TypeExpr::Function(params, ret, _) => AuraType::Function(crate::types::FunctionType { type_params: Vec::new(),
                 params: params.iter().map(|p| self.resolve_ast_type(p)).collect(),
                 return_type: Box::new(ret.as_ref().map(|r| self.resolve_ast_type(r)).unwrap_or(AuraType::Poison)),
             }),

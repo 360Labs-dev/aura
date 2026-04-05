@@ -654,7 +654,7 @@ impl SemanticAnalyzer {
             Symbol {
                 name: func.name.clone(),
                 kind: SymbolKind::Function,
-                resolved_type: AuraType::Function(FunctionType {
+                resolved_type: AuraType::Function(FunctionType { type_params: Vec::new(),
                     params: param_types,
                     return_type: Box::new(return_type),
                 }),
@@ -839,7 +839,7 @@ impl SemanticAnalyzer {
                     .as_ref()
                     .map(|r| self.resolve_type_expr(r))
                     .unwrap_or(AuraType::Primitive(PrimitiveType::Text));
-                AuraType::Function(FunctionType {
+                AuraType::Function(FunctionType { type_params: Vec::new(),
                     params: param_types,
                     return_type: Box::new(return_type),
                 })
@@ -946,12 +946,56 @@ impl SemanticAnalyzer {
                     _ => AuraType::Poison,
                 }
             }
-            Expr::Call(func, _args, _span) => {
+            Expr::Call(func, args, _span) => {
+                // BIDIRECTIONAL INFERENCE: for method calls on collections,
+                // infer lambda parameter types from the collection's element type.
+                // e.g., todos.where(t => not t.done) → t inferred as Todo
+                if let Expr::MemberAccess(obj, method, _) = func.as_ref() {
+                    let obj_type = self.infer_expr_type(obj);
+                    match (&obj_type, method.as_str()) {
+                        (AuraType::List(elem_type), "where" | "filter" | "find" | "map" | "forEach") => {
+                            // If the first arg is a lambda, register its param with elem_type
+                            if let Some(Expr::Lambda(params, body, _)) = args.first() {
+                                if let Some(param) = params.first() {
+                                    let lambda_scope = self.symbols.push_scope("lambda", self.current_scope);
+                                    self.symbols.define(lambda_scope, Symbol {
+                                        name: param.name.clone(),
+                                        kind: SymbolKind::Parameter,
+                                        resolved_type: *elem_type.clone(),
+                                        span: param.span,
+                                        poisoned: false,
+                                    });
+                                    let prev = self.current_scope;
+                                    self.current_scope = lambda_scope;
+                                    let body_type = self.infer_expr_type(body);
+                                    self.current_scope = prev;
+
+                                    // Return type depends on method
+                                    return match method.as_str() {
+                                        "where" | "filter" => obj_type, // list[T] → list[T]
+                                        "find" => AuraType::Optional(elem_type.clone()),
+                                        "map" => AuraType::List(Box::new(body_type)),
+                                        _ => AuraType::Poison,
+                                    };
+                                }
+                            }
+                            // Non-lambda args — return type based on method
+                            return match method.as_str() {
+                                "where" | "filter" => obj_type,
+                                "find" => AuraType::Optional(elem_type.clone()),
+                                "count" => AuraType::Primitive(PrimitiveType::Int),
+                                _ => AuraType::Poison,
+                            };
+                        }
+                        _ => {}
+                    }
+                }
+
                 let func_type = self.infer_expr_type(func);
                 match func_type {
                     AuraType::Function(ft) => *ft.return_type,
                     AuraType::Poison => AuraType::Poison,
-                    _ => AuraType::Poison, // Will be resolved with full method resolution
+                    _ => AuraType::Poison,
                 }
             }
             Expr::NamedCall(func, _args, _span) => {

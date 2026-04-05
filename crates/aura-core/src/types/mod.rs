@@ -30,6 +30,8 @@ pub enum AuraType {
     Union(Vec<AuraType>),
     /// Action type (for event handlers)
     Action(Vec<AuraType>),
+    /// Generic type parameter (e.g., T in fn first[T](list[T]) -> T)
+    TypeParam(String),
     /// Type variable (for inference)
     Var(usize),
     /// Error/poison type (for error recovery — propagates without further errors)
@@ -73,9 +75,11 @@ pub struct EnumVariant {
     pub fields: Vec<(String, AuraType)>,
 }
 
-/// A function type: parameter types → return type.
+/// A function type: parameter types → return type, with optional type parameters.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FunctionType {
+    /// Type parameters (e.g., [T, U] in fn map[T, U])
+    pub type_params: Vec<String>,
     pub params: Vec<AuraType>,
     pub return_type: Box<AuraType>,
 }
@@ -151,6 +155,7 @@ impl AuraType {
                 let parts: Vec<_> = types.iter().map(|t| t.display_name()).collect();
                 parts.join(" | ")
             }
+            AuraType::TypeParam(name) => name.clone(),
             AuraType::Var(id) => format!("?T{}", id),
             AuraType::Poison => "<error>".to_string(),
         }
