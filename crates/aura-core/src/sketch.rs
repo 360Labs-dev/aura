@@ -46,6 +46,15 @@ pub fn sketch(description: &str) -> String {
     if desc.contains("login") || desc.contains("auth") || desc.contains("sign in") {
         return gen_login_app(&app_name, theme);
     }
+    if desc.contains("dashboard") || desc.contains("stats") || desc.contains("charts") {
+        return gen_dashboard_app(&app_name, theme);
+    }
+    if desc.contains("social") || desc.contains("feed") || desc.contains("posts") {
+        return gen_social_feed_app(&app_name, theme);
+    }
+    if desc.contains("music") || desc.contains("player") || desc.contains("song") {
+        return gen_music_player_app(&app_name, theme);
+    }
 
     // Default: a hello world with the description as content
     gen_default_app(&app_name, theme, description)
@@ -66,6 +75,9 @@ fn extract_app_name(desc: &str) -> String {
             "settings" => return "SettingsApp".to_string(),
             "gallery" | "photos" => return "GalleryApp".to_string(),
             "login" | "auth" => return "AuthApp".to_string(),
+            "dashboard" => return "DashboardApp".to_string(),
+            "social" => return "SocialFeedApp".to_string(),
+            "music" => return "MusicPlayerApp".to_string(),
             _ => {}
         }
     }
@@ -434,6 +446,107 @@ fn gen_default_app(name: &str, theme: &str, description: &str) -> String {
     )
 }
 
+fn gen_dashboard_app(name: &str, theme: &str) -> String {
+    format!(
+        r#"app {}
+  theme: {}
+
+  screen Main
+    view
+      column gap.lg padding.2xl
+        heading "Dashboard" size.xl .bold
+        row gap.md
+          card "Users" "1234" .primary
+          card "Orders" "567" .secondary
+          card "Revenue" "$890" .success
+        chart placeholder
+        row gap.md
+          textfield placeholder: "Date Range"
+          button "Apply" .accent
+"#,
+        name, theme
+    )
+}
+
+fn gen_social_feed_app(name: &str, theme: &str) -> String {
+    format!(
+        r#"app {}
+  theme: {}
+
+  model Post
+    author: text
+    content: text
+    likes: int
+    comments: list[text]
+
+  screen Main
+    state posts: list[Post] = []
+
+    view
+      column gap.md padding.lg
+        heading "Social Feed" size.xl .bold
+        each posts as post
+          card
+            row align.center gap.md
+              avatar post.author size.md
+              column
+                text post.author .bold
+                text post.content .secondary
+                row gap.sm
+                  icon "heart" .accent -> likePost(post)
+                  text post.likes
+                  icon "comment" .muted
+            
+    action likePost(post: Post)
+      post.likes = post.likes + 1
+"#,
+        name, theme
+    )
+}
+
+fn gen_music_player_app(name: &str, theme: &str) -> String {
+    format!(
+        r#"app {}
+  theme: {}
+
+  screen Main
+    state songTitle: text = "Song Title"
+    state artist: text = "Artist Name"
+    state progress: float = 0.5
+    state isPlaying: bool = true
+
+    view
+      column gap.lg padding.2xl align.center
+        image "album_art.jpg" size.xl .rounded
+        heading songTitle size.lg .bold
+        text artist .secondary
+        row gap.md
+          text progress * 100 .muted
+          slider progress min: 0 max: 1 step: 0.01
+        row gap.md
+          button.icon "backward" .surface -> skipToPrevious()
+          if isPlaying
+            button.icon "pause" .accent .pill -> pause()
+          else
+            button.icon "play" .accent .pill -> play()
+          button.icon "forward" .surface -> skipToNext()
+
+    action play
+      isPlaying = true
+
+    action pause
+      isPlaying = false
+
+    action skipToPrevious
+      return
+
+    action skipToNext
+      return
+"#,
+        name, theme
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -476,6 +589,30 @@ mod tests {
     }
 
     #[test]
+    fn test_sketch_dashboard() {
+        let code = sketch("dashboard with stats");
+        assert!(code.contains("app DashboardApp"));
+        assert!(code.contains("card"));
+        assert!(code.contains("chart"));
+    }
+
+    #[test]
+    fn test_sketch_social_feed() {
+        let code = sketch("social feed app");
+        assert!(code.contains("app SocialFeedApp"));
+        assert!(code.contains("model Post"));
+        assert!(code.contains("avatar"));
+    }
+
+    #[test]
+    fn test_sketch_music_player() {
+        let code = sketch("music player app");
+        assert!(code.contains("app MusicPlayerApp"));
+        assert!(code.contains("image"));
+        assert!(code.contains("slider"));
+    }
+
+    #[test]
     fn test_sketch_generates_parseable_code() {
         // Every sketch template should produce parseable Aura code
         let descriptions = [
@@ -487,9 +624,12 @@ mod tests {
             "profile page",
             "timer",
             "settings",
-            "photo gallery",
+            "gallery",
             "login screen",
             "something random",
+            "dashboard",
+            "social feed",
+            "music player",
         ];
         for desc in descriptions {
             let code = sketch(desc);
