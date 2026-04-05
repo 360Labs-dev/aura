@@ -316,7 +316,7 @@ h3.aura-heading { font-size: var(--font-lg); }
 .text-medium { font-weight: 600 !important; }
 .text-italic { font-style: italic; }
 .text-mono { font-family: var(--font-mono); }
-.text-center { text-align: center; align-items: center; }
+.text-center { text-align: center; }
 .text-strike { text-decoration: line-through; opacity: 0.5; }
 .text-underline { text-decoration: underline; }
 .text-uppercase { text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85em; }
@@ -855,12 +855,17 @@ input[type="range"]::-webkit-slider-thumb {
             HIRExpr::Var(name, _) => {
                 if self.local_vars.contains(name) {
                     format!("${{{}}}", name)
-                } else {
+                } else if self.is_state_var(name) {
                     format!("${{state.{}}}", name)
+                } else {
+                    // Enum variant or constant
+                    name.clone()
                 }
             }
-            HIRExpr::MemberAccess(obj, member, _) => {
-                format!("${{{}.{}}}", self.expr_to_js(obj), member)
+            HIRExpr::MemberAccess(_, _, _) => {
+                // Use expr_to_js which has method translation
+                let js = self.expr_to_js(expr);
+                format!("${{{}}}", js)
             }
             _ => self.expr_to_js(expr),
         }
@@ -1015,12 +1020,30 @@ input[type="range"]::-webkit-slider-thumb {
             HIRExpr::Var(name, _) => {
                 if self.local_vars.contains(name) {
                     name.clone()
-                } else {
+                } else if self.is_state_var(name) {
                     format!("state.{}", name)
+                } else {
+                    // Likely an enum variant or constant — emit as string
+                    format!("\"{}\"", name)
                 }
             }
             HIRExpr::MemberAccess(obj, member, _) => {
-                format!("{}.{}", self.expr_to_js(obj), member)
+                let obj_js = self.expr_to_js(obj);
+                // Translate Aura methods to JS equivalents
+                match member.as_str() {
+                    "isEmpty" => format!("({}.length === 0)", obj_js),
+                    "count" => format!("{}.length", obj_js),
+                    "first" => format!("{}[0]", obj_js),
+                    "last" => format!("{}[{}.length - 1]", obj_js, obj_js),
+                    "toText" | "toString" => format!("String({})", obj_js),
+                    "toInt" => format!("parseInt({})", obj_js),
+                    "toFloat" => format!("parseFloat({})", obj_js),
+                    "trim" => format!("{}.trim()", obj_js),
+                    "uppercase" => format!("{}.toUpperCase()", obj_js),
+                    "lowercase" => format!("{}.toLowerCase()", obj_js),
+                    "reversed" => format!("[...{}].reverse()", obj_js),
+                    _ => format!("{}.{}", obj_js, member),
+                }
             }
             HIRExpr::Call(func, args, _) => {
                 let f = self.expr_to_js(func);
@@ -1109,6 +1132,14 @@ input[type="range"]::-webkit-slider-thumb {
             HIRStmt::Expr(expr) => self.expr_to_js(expr),
             _ => "/* unsupported statement */".to_string(),
         }
+    }
+
+    /// Check if a name is a state variable (defined in the current screen).
+    fn is_state_var(&self, name: &str) -> bool {
+        if let Some(screen) = self.module.screens.first() {
+            return screen.state.iter().any(|s| s.name == name);
+        }
+        false
     }
 
     fn icon_to_emoji(&self, name: &str) -> String {

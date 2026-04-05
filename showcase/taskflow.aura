@@ -1,0 +1,64 @@
+app TaskFlow
+  theme: modern.dark
+
+  model Task
+    title: text
+    done: bool = false
+    priority: enum[low, medium, high] = low
+
+  screen Main
+    state tasks: list[Task] = []
+    state input: text = ""
+    state filter: enum[all, active, done] = all
+
+    view
+      column gap.lg padding.lg
+        column gap.xs align.center padding.lg
+          heading "TaskFlow" size.2xl .bold
+          text "Stay organized, stay productive" .muted .sm
+
+        row gap.sm
+          textfield input placeholder: "What needs to be done?"
+          button "Add" .accent .pill -> addTask(input)
+
+        row gap.sm justify.center
+          button "All" .pill -> showAll()
+          button "Active" .pill -> showActive()
+          button "Done" .pill -> showDone()
+
+        column gap.sm
+          text taskCount .sm .muted align.center
+
+        column gap.xs
+          each tasks as task
+            row gap.md align.center padding.md .surface .rounded
+              checkbox task.done
+              column gap.xs
+                text task.title strike: task.done
+              spacer
+              button.icon "trash" .danger -> deleteTask(task)
+
+        if tasks.isEmpty
+          column gap.md align.center padding.2xl
+            icon "inbox" size.2xl .muted
+            text "No tasks yet" .muted
+            text "Add your first task above" .sm .muted
+
+    fn taskCount -> text
+      "0 tasks"
+
+    action addTask(title: text)
+      tasks = tasks
+      input = ""
+
+    action deleteTask(task: Task)
+      tasks = tasks
+
+    action showAll
+      filter = all
+
+    action showActive
+      filter = active
+
+    action showDone
+      filter = done

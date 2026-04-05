@@ -231,7 +231,7 @@ h3.aura-heading { font-size: var(--font-lg); }
 .text-medium { font-weight: 600 !important; }
 .text-italic { font-style: italic; }
 .text-mono { font-family: var(--font-mono); }
-.text-center { text-align: center; align-items: center; }
+.text-center { text-align: center; }
 .text-strike { text-decoration: line-through; opacity: 0.5; }
 .text-underline { text-decoration: underline; }
 .text-uppercase { text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85em; }

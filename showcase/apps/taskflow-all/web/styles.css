@@ -3,20 +3,21 @@
   --spacing-xl: 24px; --spacing-2xl: 32px; --spacing-3xl: 48px; --spacing-4xl: 64px;
   --font-xs: 0.75rem; --font-sm: 0.875rem; --font-md: 1rem; --font-lg: 1.125rem;
   --font-xl: 1.25rem; --font-2xl: 1.5rem; --font-3xl: 2.125rem; --font-display: 3rem;
-  --color-primary: #1a1a2e; --color-secondary: #555570; --color-muted: #8888a0;
-  --color-accent: #6C5CE7; --color-accent-hover: #5A4BD6;
-  --color-danger: #DC3545; --color-danger-hover: #c82333;
-  --color-warning: #F0AD4E; --color-success: #28A745; --color-info: #17A2B8;
-  --color-surface: #FFFFFF; --color-surface-hover: #F8F8FC;
-  --color-background: #F4F4FA; --color-card: #FFFFFF;
-  --color-divider: rgba(0,0,0,0.06); --color-input-bg: #FFFFFF;
-  --color-input-border: rgba(0,0,0,0.12);
+  --color-primary: #F0F0F8; --color-secondary: #A0A0B8; --color-muted: #606078;
+  --color-accent: #7C6CF0; --color-accent-hover: #8B7EF5;
+  --color-danger: #FF6B7A; --color-danger-hover: #FF8A95;
+  --color-warning: #FFBE5C; --color-success: #4ADE80; --color-info: #60A5FA;
+  --color-surface: #1A1A2E; --color-surface-hover: #222240;
+  --color-background: #0F0F1A; --color-card: #16162A;
+  --color-divider: rgba(255,255,255,0.08); --color-input-bg: #12121F;
+  --color-input-border: rgba(255,255,255,0.1);
   --radius-sharp: 0px; --radius-subtle: 6px; --radius-rounded: 12px;
   --radius-smooth: 16px; --radius-pill: 9999px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08); --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3); --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  color-scheme: dark;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -230,7 +231,7 @@ h3.aura-heading { font-size: var(--font-lg); }
 .text-medium { font-weight: 600 !important; }
 .text-italic { font-style: italic; }
 .text-mono { font-family: var(--font-mono); }
-.text-center { text-align: center; }
+.text-center { text-align: center; align-items: center; }
 .text-strike { text-decoration: line-through; opacity: 0.5; }
 .text-underline { text-decoration: underline; }
 .text-uppercase { text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85em; }
