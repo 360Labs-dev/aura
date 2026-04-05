@@ -28,7 +28,7 @@ logos = "0.15"
 chumsky = "0.10"
 
 # Error reporting
-ariadne = "0.5"
+ariadne = "0.6"
 thiserror = "2"
 
 # Serialization
