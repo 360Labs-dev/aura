@@ -46,10 +46,17 @@ function User(fields) {
 function render() {
   const app = document.getElementById('app');
   if (!app) return;
-  _actionRegistry = Object.create(null);
-  _actionId = 0;
+  // Save focused element
+  const focused = document.activeElement;
+  const focusedBind = focused?.dataset?.bind;
+  const focusedPos = focused?.selectionStart;
   app.innerHTML = renderView();
   _bindEvents();
+  // Restore focus
+  if (focusedBind) {
+    const el = document.querySelector(`[data-bind="${focusedBind}"]`);
+    if (el) { el.focus(); if (focusedPos != null) try { el.setSelectionRange(focusedPos, focusedPos); } catch(e) {} }
+  }
 }
 
 function renderView() {

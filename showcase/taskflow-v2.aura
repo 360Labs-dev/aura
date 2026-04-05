@@ -1,0 +1,67 @@
+app TaskFlow
+  theme: modern.dark
+
+  model Task
+    title: text
+    done: bool = false
+    category: text = "general"
+
+  screen Main
+    state tasks: list[Task] = []
+    state input: text = ""
+    state filter: text = "all"
+
+    view
+      column padding.lg gap.lg
+        column gap.xs padding.vertical.lg
+          heading "TaskFlow" size.2xl .bold
+          text "Get things done." .secondary .sm
+
+        column gap.sm .surface .rounded padding.md
+          row gap.sm
+            textfield input placeholder: "Add a new task..."
+            button "Add" .accent .pill -> addTask(input)
+
+        row gap.sm
+          button "All" .pill -> showAll()
+          button "Active" .pill -> showActive()
+          button "Done" .pill -> showDone()
+
+        text "Showing tasks" .muted .sm
+
+        column gap.xs
+          each tasks as task
+            row gap.md align.center padding.md .surface .rounded
+              checkbox task.done
+              text task.title strike: task.done
+              spacer
+              text task.category .sm .muted
+              button.icon "trash" .danger -> deleteTask(task)
+
+        if tasks.isEmpty
+          column gap.sm align.center padding.2xl
+            text "No tasks yet" .muted
+            text "Type something above and hit Add" .sm .secondary
+
+        row justify.between padding.top.md
+          text "Manage your tasks" .sm .muted
+          button.ghost "Clear completed" .sm .muted -> clearDone()
+
+    action addTask(title: text)
+      tasks = tasks.append(Task(title: title))
+      input = ""
+
+    action deleteTask(task: Task)
+      tasks = tasks.remove(task)
+
+    action clearDone
+      tasks = tasks.filter(t => not t.done)
+
+    action showAll
+      filter = "all"
+
+    action showActive
+      filter = "active"
+
+    action showDone
+      filter = "done"

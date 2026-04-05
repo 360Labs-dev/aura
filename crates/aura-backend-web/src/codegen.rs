@@ -780,14 +780,22 @@ input[type="range"]::-webkit-slider-thumb {
         }
 
         // Reactive render function — rebuilds DOM from state
+        // Preserves input focus across re-renders
         self.js.push_str("function render() {\n");
         self.js
             .push_str("  const app = document.getElementById('app');\n");
         self.js.push_str("  if (!app) return;\n");
-        self.js.push_str("  _actionRegistry = Object.create(null);\n");
-        self.js.push_str("  _actionId = 0;\n");
+        self.js.push_str("  // Save focused element\n");
+        self.js.push_str("  const focused = document.activeElement;\n");
+        self.js.push_str("  const focusedBind = focused?.dataset?.bind;\n");
+        self.js.push_str("  const focusedPos = focused?.selectionStart;\n");
         self.js.push_str("  app.innerHTML = renderView();\n");
         self.js.push_str("  _bindEvents();\n");
+        self.js.push_str("  // Restore focus\n");
+        self.js.push_str("  if (focusedBind) {\n");
+        self.js.push_str("    const el = document.querySelector(`[data-bind=\"${focusedBind}\"]`);\n");
+        self.js.push_str("    if (el) { el.focus(); if (focusedPos != null) try { el.setSelectionRange(focusedPos, focusedPos); } catch(e) {} }\n");
+        self.js.push_str("  }\n");
         self.js.push_str("}\n\n");
 
         // Render the view tree as HTML string
