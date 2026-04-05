@@ -35,15 +35,15 @@ function render() {
 function renderView() {
   return `
         <div class="aura-column" style="gap: 8px; padding: 8px">
-            <div class="aura-row" style="">
-                <h1 class="aura-heading">Gallery</h1>
+            <div class="aura-row text-center" style="text-align: center; align-items: center">
+                <h1 class="aura-heading text-bold" style="font-size: 1.25rem">Gallery</h1>
                 <div class="aura-spacer"></div>
                 <button class="aura-button icon color-accent" onclick="addPhoto()">${_icon('camera')}</button>
             </div>
             <div class="aura-grid">
 ${state.photos.map(photo => `<!-- unsupported -->`).join('')}            </div>
-${(state.photos.isEmpty) ? `<div class="aura-column" style="gap: 8px; padding: 32px">
-                <span class="aura-icon">${_icon('photo')}</span>
+${(state.photos.isEmpty) ? `<div class="aura-column text-center" style="gap: 8px; padding: 32px; text-align: center; align-items: center">
+                <span class="aura-icon color-muted">${_icon('photo')}</span>
                 <span class="aura-text color-muted">No photos yet</span>
                 <button class="aura-button" onclick="addPhoto()">Take Photo</button>
             </div>` : ``}        </div>

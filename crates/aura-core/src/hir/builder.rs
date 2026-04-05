@@ -712,9 +712,31 @@ impl HIRBuilder {
                     spacing.margin_right = Some(px);
                 }
             }
-            ["size", size] | ["width", size] | ["height", size] => {
-                // Sizing tokens — handled at a higher level
-                let _ = design::resolve_spacing(size, self.spacing_base);
+            ["size", size_tok] => {
+                // size.xl, size.2xl, size.display → typography size
+                if let Some(size_val) = design::typography_size(size_tok) {
+                    let typo = design.typography.get_or_insert_with(Default::default);
+                    typo.size = Some(size_val);
+                }
+            }
+            ["width", _size] | ["height", _size] => {
+                // width/height tokens — handled at a higher level
+            }
+            ["align", direction] => {
+                match *direction {
+                    "center" => {
+                        // Center both flex alignment AND text
+                        let typo = design.typography.get_or_insert_with(Default::default);
+                        typo.alignment = Some(design::TextAlignment::Center);
+                    }
+                    "start" | "leading" => {}
+                    "end" | "trailing" => {}
+                    _ => {}
+                }
+            }
+            ["justify", mode] => {
+                // justify.center, justify.between etc — handled via CSS classes
+                let _ = mode;
             }
             // Single tokens
             [single] => {
@@ -1029,5 +1051,22 @@ app Test
     view
       text \"hi\"");
         assert_eq!(hir.app.theme, Some("modern.dark".to_string()));
+    }
+
+    #[test]
+    fn test_size_display_token() {
+        let source = "app T\n  screen M\n    view\n      text \"Hello\" size.display .bold";
+        let result = crate::parser::parse(source);
+        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        let hir = build_hir(result.program.as_ref().unwrap());
+        match &hir.screens[0].view {
+            HIRView::Text(t) => {
+                let size = t.design.typography.as_ref().and_then(|ty| ty.size);
+                let weight = t.design.typography.as_ref().and_then(|ty| ty.weight);
+                assert_eq!(size, Some(3.0), "size.display should resolve to 3.0rem");
+                assert_eq!(weight, Some(700), "bold should resolve to 700");
+            }
+            other => panic!("Expected Text, got: {:?}", std::mem::discriminant(other)),
+        }
     }
 }

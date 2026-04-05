@@ -43,9 +43,9 @@ function render() {
 
 function renderView() {
   return `
-        <div class="aura-column" style="gap: 16px; padding: 32px">
-            <span class="aura-icon">${_icon('lock.circle')}</span>
-            <h1 class="aura-heading">Welcome Back</h1>
+        <div class="aura-column text-center" style="gap: 16px; padding: 32px; text-align: center; align-items: center">
+            <span class="aura-icon color-accent">${_icon('lock.circle')}</span>
+            <h1 class="aura-heading text-bold" style="font-size: 1.25rem">Welcome Back</h1>
             <span class="aura-text color-secondary">Sign in to continue</span>
             <div class="aura-column" style="gap: 8px">
                 <input class="aura-input" type="text" placeholder="Email address" data-bind="email" value="${state.email || ''}"/>

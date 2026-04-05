@@ -41,14 +41,14 @@ function render() {
 function renderView() {
   return `
         <div class="aura-column" style="">
-            <h1 class="aura-heading" style="padding: 8px">Chat</h1>
+            <h1 class="aura-heading text-bold" style="padding: 8px; font-size: 1.25rem">Chat</h1>
             <div class="aura-scroll">
                 <div class="aura-column" style="gap: 4px">
 ${state.messages.map(msg => `<div class="aura-row" style="">
-                            <span class="aura-text">${msg.text}</span>
+                            <span class="aura-text rounded" style="padding: 8px; border-radius: 8px">${msg.text}</span>
                         </div>`).join('')}                </div>
             </div>
-            <div class="aura-row" style="gap: 4px">
+            <div class="aura-row bg-surface" style="gap: 4px; padding: 8px">
                 <input class="aura-input" type="text" placeholder="Type a message..." data-bind="input" value="${state.input || ''}"/>
                 <button class="aura-button icon color-accent" onclick="sendMessage()">${_icon('arrow.up')}</button>
             </div>

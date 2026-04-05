@@ -38,20 +38,20 @@ function render() {
 function renderView() {
   return `
         <div class="aura-column" style="gap: 8px; padding: 16px">
-            <h1 class="aura-heading">Settings</h1>
+            <h1 class="aura-heading text-bold" style="font-size: 1.25rem">Settings</h1>
             <div class="aura-column" style="gap: 4px; padding: 8px">
                 <label class="aura-toggle"><input type="checkbox" data-bind="darkMode"/> Dark Mode</label>
                 <hr class="aura-divider"/>
                 <label class="aura-toggle"><input type="checkbox" data-bind="notifications"/> Notifications</label>
                 <hr class="aura-divider"/>
-                <div class="aura-row" style="gap: 8px">
-                    <span class="aura-text">${"Volume".medium}</span>
+                <div class="aura-row text-center" style="gap: 8px; text-align: center; align-items: center">
+                    <span class="aura-text text-medium">Volume</span>
                     <!-- unsupported -->
                 </div>
             </div>
             <div class="aura-column" style="gap: 4px; padding: 8px">
-                <div class="aura-row" style="">
-                    <span class="aura-text">${"Language".medium}</span>
+                <div class="aura-row text-center" style="text-align: center; align-items: center">
+                    <span class="aura-text text-medium">Language</span>
                     <div class="aura-spacer"></div>
                     <span class="aura-text color-secondary">${state.language}</span>
                 </div>

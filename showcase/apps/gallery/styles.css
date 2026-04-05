@@ -41,16 +41,18 @@ body {
   min-height: 100vh;
   background: var(--color-background);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Layout */
 .aura-column { display: flex; flex-direction: column; }
-.aura-row { display: flex; flex-direction: row; align-items: center; }
+.aura-row { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; }
 .aura-stack { display: grid; grid-template-areas: "s"; }
 .aura-stack > * { grid-area: s; }
-.aura-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-.aura-scroll { overflow-y: auto; flex: 1; }
-.aura-spacer { flex: 1; }
+.aura-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.aura-scroll { overflow-y: auto; flex: 1; min-height: 100px; }
+.aura-spacer { flex: 1; min-width: 8px; }
 
 /* Divider */
 .aura-divider {
@@ -117,6 +119,13 @@ h3.aura-heading { font-size: var(--font-lg); }
   color: var(--color-accent);
 }
 .aura-button.outline:hover { background: var(--color-accent); color: white; }
+
+.aura-button.color-danger { background: var(--color-danger); }
+.aura-button.color-danger:hover { background: var(--color-danger-hover, #c82333); }
+.aura-button.color-warning { background: var(--color-warning); color: #1a1a2e; }
+.aura-button.color-success { background: var(--color-success); }
+.aura-button.bg-surface { background: var(--color-surface); color: var(--color-primary); border: 1px solid var(--color-divider); }
+.aura-button.bg-surface:hover { background: var(--color-surface-hover); }
 
 .aura-button.ghost {
   background: transparent;
@@ -222,13 +231,13 @@ h3.aura-heading { font-size: var(--font-lg); }
 .text-medium { font-weight: 600 !important; }
 .text-italic { font-style: italic; }
 .text-mono { font-family: var(--font-mono); }
-.text-center { text-align: center; }
+.text-center { text-align: center; align-items: center; }
 .text-strike { text-decoration: line-through; opacity: 0.5; }
 .text-underline { text-decoration: underline; }
 .text-uppercase { text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85em; }
 
 /* Alignment */
-.align-center { align-items: center; }
+.align-center { align-items: center; text-align: center; }
 .align-start { align-items: flex-start; }
 .align-end { align-items: flex-end; }
 .justify-center { justify-content: center; }

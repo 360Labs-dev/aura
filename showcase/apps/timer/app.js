@@ -44,11 +44,11 @@ function render() {
 
 function renderView() {
   return `
-        <div class="aura-column" style="gap: 24px; padding: 32px">
-            <h1 class="aura-heading">Timer</h1>
-            <span class="aura-text">${state.seconds}</span>
+        <div class="aura-column text-center" style="gap: 24px; padding: 32px; text-align: center; align-items: center">
+            <h1 class="aura-heading text-bold" style="font-size: 1.25rem">Timer</h1>
+            <span class="aura-text" style="font-size: 3rem">${state.seconds}</span>
             <div class="aura-row" style="gap: 8px">
-${(state.running) ? `<button class="aura-button" onclick="pause()">Pause</button>` : `<button class="aura-button" onclick="start()">Start</button>`}                <button class="aura-button pill" onclick="reset()">${"Reset".surface}</button>
+${(state.running) ? `<button class="aura-button" onclick="pause()">Pause</button>` : `<button class="aura-button" onclick="start()">Start</button>`}                <button class="aura-button" onclick="reset()">Reset</button>
             </div>
         </div>
 `;

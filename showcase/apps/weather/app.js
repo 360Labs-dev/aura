@@ -32,25 +32,25 @@ function render() {
 
 function renderView() {
   return `
-        <div class="aura-column" style="gap: 24px; padding: 32px">
-            <span class="aura-text">${state.city}</span>
-            <span class="aura-icon">${_icon('sun.max')}</span>
-            <span class="aura-text">${state.temperature}</span>
+        <div class="aura-column text-center" style="gap: 24px; padding: 32px; text-align: center; align-items: center">
+            <span class="aura-text color-secondary" style="font-size: 1.125rem">${state.city}</span>
+            <span class="aura-icon color-warning">${_icon('sun.max')}</span>
+            <span class="aura-text text-bold" style="font-size: 3rem">${state.temperature}</span>
             <span class="aura-text">${state.condition}</span>
             <hr class="aura-divider"/>
-            <h1 class="aura-heading" style="padding-top: 16px">Forecast</h1>
+            <h1 class="aura-heading text-bold" style="padding-top: 16px; font-size: 1.125rem">Forecast</h1>
             <div class="aura-row" style="gap: 16px">
-                <div class="aura-column" style="gap: 2px">
+                <div class="aura-column text-center" style="gap: 2px; text-align: center; align-items: center">
                     <span class="aura-text color-muted">Mon</span>
                     <span class="aura-icon color-secondary">${_icon('cloud')}</span>
                     <span class="aura-text">68</span>
                 </div>
-                <div class="aura-column" style="gap: 2px">
+                <div class="aura-column text-center" style="gap: 2px; text-align: center; align-items: center">
                     <span class="aura-text color-muted">Tue</span>
                     <span class="aura-icon color-info">${_icon('cloud.rain')}</span>
                     <span class="aura-text">62</span>
                 </div>
-                <div class="aura-column" style="gap: 2px">
+                <div class="aura-column text-center" style="gap: 2px; text-align: center; align-items: center">
                     <span class="aura-text color-muted">Wed</span>
                     <span class="aura-icon color-warning">${_icon('sun.max')}</span>
                     <span class="aura-text">75</span>

@@ -2090,16 +2090,31 @@ impl Parser {
     }
 
     /// Parse a compound design token: `gap.md`, `padding.horizontal.lg`, etc.
+    /// Compound tokens have 2-3 segments: prefix.value or prefix.direction.value.
+    /// Does NOT greedily consume — stops after the compound token to let
+    /// subsequent `.bold`, `.accent` etc. be parsed as separate tokens.
     fn parse_compound_design_token(&mut self) -> Option<DesignToken> {
         let span = self.peek_span();
         let (first, _) = self.expect_ident().ok()?;
-        let mut segments = vec![first];
+        let mut segments = vec![first.clone()];
 
-        while self.eat(&Token::Dot) {
+        // Eat first dot + segment (e.g., gap.md)
+        if self.eat(&Token::Dot) {
             if let Some(segment) = self.try_parse_token_segment() {
-                segments.push(segment);
-            } else {
-                break;
+                segments.push(segment.clone());
+
+                // Only continue for a THIRD segment if the second was a direction
+                // (e.g., padding.horizontal.lg — but NOT size.display.bold)
+                if is_direction_token(&segment) {
+                    let saved = self.pos;
+                    if self.eat(&Token::Dot) {
+                        if let Some(third) = self.try_parse_token_segment() {
+                            segments.push(third);
+                        } else {
+                            self.pos = saved;
+                        }
+                    }
+                }
             }
         }
 
@@ -2161,6 +2176,16 @@ impl Parser {
 }
 
 /// Check if a name is a known design token.
+/// Direction tokens that can appear as the second segment in a 3-segment compound token.
+fn is_direction_token(name: &str) -> bool {
+    matches!(
+        name,
+        "top" | "bottom" | "left" | "right"
+            | "horizontal" | "vertical"
+            | "leading" | "trailing" | "start" | "end"
+    )
+}
+
 /// Check if name is a compound design token prefix (e.g., `gap`, `padding`, `margin`).
 fn is_compound_token_prefix(name: &str) -> bool {
     matches!(
@@ -2178,12 +2203,14 @@ fn is_unambiguous_design_token(name: &str) -> bool {
         name,
         // These are clearly design tokens, never field/method names
         "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl"
-            | "bold" | "semibold" | "italic" | "mono" | "underline" | "strike"
+            | "bold" | "semibold" | "medium" | "heavy" | "thin" | "regular" | "black"
+            | "italic" | "mono" | "underline" | "strike"
             | "uppercase" | "lowercase" | "capitalize"
-            | "accent" | "danger" | "warning" | "success" | "info" | "muted" | "secondary"
+            | "primary" | "secondary" | "accent" | "danger" | "warning" | "success"
+            | "info" | "muted" | "surface" | "background"
             | "rounded" | "smooth" | "pill" | "circle" | "sharp" | "subtle"
             | "ease" | "spring" | "bounce" | "indeterminate"
-            | "fill" | "fit"
+            | "fill" | "fit" | "display" | "translucent" | "disabled" | "loading"
     )
 }
 
