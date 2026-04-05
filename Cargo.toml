@@ -22,7 +22,7 @@ repository = "https://github.com/360Labs-dev/aura"
 
 [workspace.dependencies]
 # Lexer
-logos = "0.15"
+logos = "0.16"
 
 # Parser
 chumsky = "0.10"
