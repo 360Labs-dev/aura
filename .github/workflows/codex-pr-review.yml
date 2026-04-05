@@ -37,7 +37,7 @@ jobs:
 
       - name: Upload Codex output
         if: always() && hashFiles('codex-output.md') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: codex-pr-review
           path: codex-output.md
