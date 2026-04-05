@@ -1,0 +1,30 @@
+---
+source: crates/aura-core/tests/snapshots.rs
+expression: swift.swift
+---
+import SwiftUI
+
+struct User: Identifiable, Hashable {
+    let id = UUID()
+    var name: String
+    var email: String
+    var active: Bool = true
+}
+
+struct MainView: View {
+
+    var body: some View {
+        Text("hi")
+    }
+}
+
+@main
+struct TestApp: App {
+    var body: some Scene {
+        WindowGroup {
+            NavigationStack {
+                MainView()
+            }
+        }
+    }
+}

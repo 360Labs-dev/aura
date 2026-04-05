@@ -1,0 +1,34 @@
+---
+source: crates/aura-core/tests/snapshots.rs
+expression: output.swift
+---
+import SwiftUI
+
+struct MainView: View {
+    @State private var count: Int = 0
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text(count)
+            Button("+", action: { increment() })
+                .buttonStyle(.borderedProminent)
+                .tint(.accentColor)
+        }
+            .padding(24)
+    }
+
+    func increment() {
+        count = (count + 1)
+    }
+}
+
+@main
+struct CounterApp: App {
+    var body: some Scene {
+        WindowGroup {
+            NavigationStack {
+                MainView()
+            }
+        }
+    }
+}

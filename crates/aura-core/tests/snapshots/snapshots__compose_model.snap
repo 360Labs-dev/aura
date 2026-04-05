@@ -1,0 +1,41 @@
+---
+source: crates/aura-core/tests/snapshots.rs
+expression: compose.kotlin
+---
+package com.aura.test
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+data class User(
+    val name: String,
+    val email: Any,
+    val active: Boolean = true
+)
+
+@Composable
+fun MainScreen() {
+    Text(text = "hi")
+}
+
+class TestActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme {
+                MainScreen()
+            }
+        }
+    }
+}

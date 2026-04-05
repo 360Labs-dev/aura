@@ -1,0 +1,23 @@
+---
+source: crates/aura-core/tests/snapshots.rs
+expression: output.swift
+---
+import SwiftUI
+
+struct MainView: View {
+
+    var body: some View {
+        Text("Hello, Aura!")
+    }
+}
+
+@main
+struct HelloApp: App {
+    var body: some Scene {
+        WindowGroup {
+            NavigationStack {
+                MainView()
+            }
+        }
+    }
+}

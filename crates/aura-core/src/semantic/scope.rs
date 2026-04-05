@@ -497,9 +497,15 @@ impl SemanticAnalyzer {
                     &cond_type,
                     if_view.span,
                 );
+                // TYPE NARROWING for view conditionals
+                let narrow_scope = self.symbols.push_scope("view_if_narrow", self.current_scope);
+                self.apply_narrowing(&if_view.condition, narrow_scope);
+                let prev = self.current_scope;
+                self.current_scope = narrow_scope;
                 for child in &if_view.then_body {
                     self.analyze_view_element(child);
                 }
+                self.current_scope = prev;
                 if let Some(ref else_body) = if_view.else_body {
                     for child in else_body {
                         self.analyze_view_element(child);
@@ -752,7 +758,18 @@ impl SemanticAnalyzer {
                     &cond_type,
                     *span,
                 );
+
+                // TYPE NARROWING: analyze condition for type refinements
+                // Pattern: if x is some(val) → register val in then-branch scope
+                // Pattern: if x != nil → narrow x to non-optional in then-branch
+                let narrowing_scope = self.symbols.push_scope("if_narrow", self.current_scope);
+                self.apply_narrowing(cond, narrowing_scope);
+
+                let prev_scope = self.current_scope;
+                self.current_scope = narrowing_scope;
                 self.analyze_statements(then_body);
+                self.current_scope = prev_scope;
+
                 if let Some(else_stmts) = else_body {
                     self.analyze_statements(else_stmts);
                 }
@@ -1101,6 +1118,41 @@ impl SemanticAnalyzer {
     }
 
     // === Error helpers ===
+
+    /// Apply type narrowing based on a condition expression.
+    ///
+    /// TypeScript-style flow analysis: if the condition tests a type,
+    /// register the narrowed type in the given scope.
+    fn apply_narrowing(&mut self, cond: &Expr, scope: usize) {
+        match cond {
+            // Pattern: x is some(val) → register val with unwrapped type
+            Expr::BinOp(left, BinOp::Eq, right, _) | Expr::BinOp(left, BinOp::NotEq, right, _) => {
+                // x != nil → narrow x to non-optional
+                if matches!(right.as_ref(), Expr::Nil(_)) {
+                    if let Expr::Var(name, span) = left.as_ref() {
+                        if let Some(sym) = self.symbols.lookup(self.current_scope, name) {
+                            if let AuraType::Optional(inner) = &sym.resolved_type {
+                                // Narrow: optional[T] → T in the then-branch
+                                self.symbols.define(scope, Symbol {
+                                    name: name.clone(),
+                                    kind: sym.kind.clone(),
+                                    resolved_type: *inner.clone(),
+                                    span: *span,
+                                    poisoned: false,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            // Pattern: not x.isEmpty → x has items (informational, not type-level)
+            Expr::UnaryOp(UnaryOp::Not, inner, _) => {
+                // Recurse into the negated expression for future narrowing patterns
+                let _ = inner;
+            }
+            _ => {}
+        }
+    }
 
     fn undefined_variable_error(&mut self, name: &str, span: Span) {
         let visible = self.symbols.visible_names(self.current_scope);

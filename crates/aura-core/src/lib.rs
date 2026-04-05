@@ -17,8 +17,10 @@ pub mod hir;
 pub mod lexer;
 pub mod lir;
 pub mod parser;
+pub mod project;
 pub mod semantic;
 pub mod sketch;
+pub mod sourcemap;
 pub mod types;
 
 /// Re-export commonly used types.
