@@ -39,19 +39,43 @@ fn compile_all_backends(source: &str, name: &str) {
     let web = aura_backend_web::compile_to_web(&hir);
     assert!(!web.html.is_empty(), "{}: web HTML is empty", name);
     assert!(!web.css.is_empty(), "{}: web CSS is empty", name);
-    assert!(web.html.contains("<!DOCTYPE html>"), "{}: web HTML missing doctype", name);
+    assert!(
+        web.html.contains("<!DOCTYPE html>"),
+        "{}: web HTML missing doctype",
+        name
+    );
 
     // SwiftUI backend
     let swift = aura_backend_swift::compile_to_swift(&hir);
     assert!(!swift.swift.is_empty(), "{}: Swift output is empty", name);
-    assert!(swift.swift.contains("import SwiftUI"), "{}: Swift missing import", name);
-    assert!(swift.swift.contains("struct"), "{}: Swift missing struct", name);
+    assert!(
+        swift.swift.contains("import SwiftUI"),
+        "{}: Swift missing import",
+        name
+    );
+    assert!(
+        swift.swift.contains("struct"),
+        "{}: Swift missing struct",
+        name
+    );
 
     // Compose backend
     let compose = aura_backend_compose::compile_to_compose(&hir);
-    assert!(!compose.kotlin.is_empty(), "{}: Kotlin output is empty", name);
-    assert!(compose.kotlin.contains("@Composable"), "{}: Kotlin missing @Composable", name);
-    assert!(compose.kotlin.contains("MaterialTheme"), "{}: Kotlin missing MaterialTheme", name);
+    assert!(
+        !compose.kotlin.is_empty(),
+        "{}: Kotlin output is empty",
+        name
+    );
+    assert!(
+        compose.kotlin.contains("@Composable"),
+        "{}: Kotlin missing @Composable",
+        name
+    );
+    assert!(
+        compose.kotlin.contains("MaterialTheme"),
+        "{}: Kotlin missing MaterialTheme",
+        name
+    );
 }
 
 #[test]
@@ -70,15 +94,16 @@ fn test_conformance_all_files() {
         compile_all_backends(&source, &name);
     }
 
-    eprintln!("  All {} conformance files passed across 3 backends", files.len());
+    eprintln!(
+        "  All {} conformance files passed across 3 backends",
+        files.len()
+    );
 }
 
 #[test]
 fn test_conformance_examples() {
     // Also run all example files through all backends
-    let examples = [
-        "../../examples/minimal.aura",
-    ];
+    let examples = ["../../examples/minimal.aura"];
 
     for file in &examples {
         let source = fs::read_to_string(file).expect(&format!("Cannot read {}", file));

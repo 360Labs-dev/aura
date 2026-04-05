@@ -3,7 +3,8 @@
 //! The main command-line interface for the Aura language.
 
 use clap::{Parser, Subcommand};
-use std::path::Path;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(name = "aura")]
@@ -22,8 +23,8 @@ enum Commands {
         #[arg(short, long, default_value = "web")]
         target: String,
 
-        /// Source file or directory
-        #[arg(default_value = "src/main.aura")]
+        /// Project root, source directory, or source file
+        #[arg(default_value = ".")]
         path: String,
 
         /// Output directory
@@ -47,7 +48,7 @@ enum Commands {
 
     /// Format .aura source files
     Fmt {
-        #[arg(default_value = "src")]
+        #[arg(default_value = ".")]
         path: String,
         #[arg(long)]
         check: bool,
@@ -107,6 +108,14 @@ enum PkgCommands {
     Publish,
 }
 
+struct ProjectContext {
+    target_path: PathBuf,
+    project_root: PathBuf,
+    display_path: String,
+    project: aura_core::project::Project,
+    sources: HashMap<String, String>,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -117,7 +126,11 @@ fn main() {
             output,
             format,
         } => build_command(&target, &path, &output, format.as_deref()),
-        Commands::Run { target, preview, port } => run_command(&target, port),
+        Commands::Run {
+            target,
+            preview: _preview,
+            port,
+        } => run_command(&target, port),
         Commands::Fmt { path, check } => fmt_command(&path, check),
         Commands::Explain { file } => explain_command(&file),
         Commands::Diff { a, b } => diff_command(&a, &b),
@@ -128,192 +141,219 @@ fn main() {
             AgentCommands::Serve => agent_serve(),
             AgentCommands::Call { method, params } => agent_call(&method, &params),
         },
-        Commands::Pkg { action } => {
+        Commands::Pkg { action: _action } => {
             eprintln!("  aura pkg not yet implemented");
         }
     }
 }
 
 fn build_command(target: &str, path: &str, output_dir: &str, format: Option<&str>) {
+    if try_build_command(target, path, output_dir, format).is_err() {
+        std::process::exit(1);
+    }
+}
+
+fn try_build_command(
+    target: &str,
+    path: &str,
+    output_dir: &str,
+    format: Option<&str>,
+) -> Result<(), ()> {
     let use_json = format == Some("json");
+    let context = load_project_context(path).map_err(|message| {
+        eprintln!("  error: {}", message);
+    })?;
 
     eprintln!();
     eprintln!("  aura build v{}", env!("CARGO_PKG_VERSION"));
-    eprintln!("  {} → {}", path, target);
+    eprintln!("  {} → {}", context.display_path, target);
 
-    // Incremental compilation: check cache
-    let project_root = Path::new(path)
-        .parent()
-        .and_then(|p| p.parent())
-        .unwrap_or(Path::new("."));
-    if let Some(manifest) = aura_core::cache::BuildManifest::load(project_root) {
-        let source_content = std::fs::read_to_string(path).unwrap_or_default();
-        let current_hash = aura_core::cache::hash_source(&source_content);
-        let files = vec![(path.to_string(), current_hash.clone())];
-        let check = manifest.check(&files);
+    let current_files = aura_core::cache::hash_project_files(&context.target_path);
+    if let Some(manifest) = aura_core::cache::BuildManifest::load(&context.project_root) {
+        let check = manifest.check(&current_files);
         if check.is_clean() {
             eprintln!("  [cached] No changes detected — skipping rebuild");
             eprintln!();
-            return;
+            return Ok(());
         }
         eprintln!("  [incremental] {}", check.summary());
     }
     eprintln!();
 
-    // Read source
-    let source = match std::fs::read_to_string(path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("  error: Cannot read '{}': {}", path, e);
-
-            // Try to find .aura files in the path as a directory
-            if Path::new(path).is_dir() {
-                let main_file = Path::new(path).join("main.aura");
-                if main_file.exists() {
-                    match std::fs::read_to_string(&main_file) {
-                        Ok(s) => {
-                            eprintln!("  Found {}", main_file.display());
-                            s
-                        }
-                        Err(e) => {
-                            eprintln!("  error: Cannot read '{}': {}", main_file.display(), e);
-                            std::process::exit(1);
-                        }
-                    }
-                } else {
-                    eprintln!("  hint: No main.aura found in '{}'", path);
-                    std::process::exit(1);
-                }
-            } else {
-                std::process::exit(1);
-            }
-        }
-    };
-
-    // Parse
-    eprintln!("  [1/4] Parsing...");
-    let parse_result = aura_core::parser::parse(&source);
-
-    if !parse_result.errors.is_empty() {
-        eprintln!("  {} error(s) found:", parse_result.errors.len());
-        for err in &parse_result.errors {
-            if use_json {
-                print_error_json(err);
-            } else {
-                print_error_text(err, &source, path);
-            }
-        }
-        if parse_result.program.is_none() {
-            std::process::exit(1);
-        }
+    eprintln!("  [1/4] Loading project...");
+    if print_project_load_errors(&context, use_json) {
+        return Err(());
     }
 
-    let program = match parse_result.program {
-        Some(p) => p,
-        None => {
-            eprintln!("  error: Failed to parse program");
-            std::process::exit(1);
-        }
-    };
-
-    // Semantic analysis
     eprintln!("  [2/4] Analyzing...");
-    let analysis = aura_core::semantic::SemanticAnalyzer::new().analyze(&program);
-
+    let analysis = aura_core::semantic::SemanticAnalyzer::new().analyze(&context.project.program);
     if !analysis.errors.is_empty() {
-        let error_count = analysis.errors.iter().filter(|e| e.is_error()).count();
+        let error_count = analysis.errors.iter().filter(|err| err.is_error()).count();
         let warning_count = analysis.errors.len() - error_count;
+
         if error_count > 0 {
             eprintln!("  {} error(s), {} warning(s):", error_count, warning_count);
         } else {
             eprintln!("  {} warning(s):", warning_count);
         }
+
+        let (source, file) = if context.project.files.len() == 1 {
+            let file = &context.project.files[0];
+            (
+                context
+                    .sources
+                    .get(&file.path)
+                    .map(String::as_str)
+                    .unwrap_or(""),
+                file.path.as_str(),
+            )
+        } else {
+            ("", context.display_path.as_str())
+        };
+
         for err in &analysis.errors {
             if use_json {
                 print_error_json(err);
             } else {
-                print_error_text(err, &source, path);
+                print_error_text(err, source, file);
             }
+        }
+
+        if error_count > 0 {
+            return Err(());
         }
     }
 
-    // Build HIR
     eprintln!("  [3/4] Building IR...");
-    let hir = aura_core::hir::build_hir(&program);
+    let hir = aura_core::hir::build_hir(&context.project.program);
 
-    // Codegen
     eprintln!("  [4/4] Generating {}...", target);
     match target {
         "web" => {
             let output = aura_backend_web::compile_to_web(&hir);
-
-            // Write output files
             let out_path = Path::new(output_dir);
-            std::fs::create_dir_all(out_path).expect("Failed to create output directory");
+            std::fs::create_dir_all(out_path).map_err(|err| {
+                eprintln!(
+                    "  error: Failed to create output directory '{}': {}",
+                    output_dir, err
+                );
+            })?;
 
-            std::fs::write(out_path.join("index.html"), &output.html)
-                .expect("Failed to write index.html");
-            std::fs::write(out_path.join("styles.css"), &output.css)
-                .expect("Failed to write styles.css");
-            std::fs::write(out_path.join("app.js"), &output.js)
-                .expect("Failed to write app.js");
+            write_file(out_path.join("index.html"), &output.html, "index.html")?;
+            write_file(out_path.join("styles.css"), &output.css, "styles.css")?;
+            write_file(out_path.join("app.js"), &output.js, "app.js")?;
 
             eprintln!();
             eprintln!("  Build complete:");
-            eprintln!("    {}/index.html  ({} bytes)", output_dir, output.html.len());
-            eprintln!("    {}/styles.css  ({} bytes)", output_dir, output.css.len());
+            eprintln!(
+                "    {}/index.html  ({} bytes)",
+                output_dir,
+                output.html.len()
+            );
+            eprintln!(
+                "    {}/styles.css  ({} bytes)",
+                output_dir,
+                output.css.len()
+            );
             eprintln!("    {}/app.js      ({} bytes)", output_dir, output.js.len());
             eprintln!();
             eprintln!("  Open {}/index.html in a browser to preview.", output_dir);
         }
         "ios" | "swift" => {
             let output = aura_backend_swift::compile_to_swift(&hir);
-
             let out_path = Path::new(output_dir);
-            std::fs::create_dir_all(out_path).expect("Failed to create output directory");
+            std::fs::create_dir_all(out_path).map_err(|err| {
+                eprintln!(
+                    "  error: Failed to create output directory '{}': {}",
+                    output_dir, err
+                );
+            })?;
 
-            std::fs::write(out_path.join(&output.filename), &output.swift)
-                .expect("Failed to write Swift file");
+            write_file(
+                out_path.join(&output.filename),
+                &output.swift,
+                output.filename.as_str(),
+            )?;
 
             eprintln!();
             eprintln!("  Build complete:");
-            eprintln!("    {}/{}  ({} bytes)", output_dir, output.filename, output.swift.len());
+            eprintln!(
+                "    {}/{}  ({} bytes)",
+                output_dir,
+                output.filename,
+                output.swift.len()
+            );
         }
         "android" | "compose" => {
             let output = aura_backend_compose::compile_to_compose(&hir);
-
             let out_path = Path::new(output_dir);
-            std::fs::create_dir_all(out_path).expect("Failed to create output directory");
+            std::fs::create_dir_all(out_path).map_err(|err| {
+                eprintln!(
+                    "  error: Failed to create output directory '{}': {}",
+                    output_dir, err
+                );
+            })?;
 
-            std::fs::write(out_path.join(&output.filename), &output.kotlin)
-                .expect("Failed to write Kotlin file");
+            write_file(
+                out_path.join(&output.filename),
+                &output.kotlin,
+                output.filename.as_str(),
+            )?;
 
             eprintln!();
             eprintln!("  Build complete:");
-            eprintln!("    {}/{}  ({} bytes)", output_dir, output.filename, output.kotlin.len());
+            eprintln!(
+                "    {}/{}  ({} bytes)",
+                output_dir,
+                output.filename,
+                output.kotlin.len()
+            );
         }
         "all" => {
             let out_base = Path::new(output_dir);
 
-            // Web
             let web_out = out_base.join("web");
-            std::fs::create_dir_all(&web_out).expect("Failed to create web output directory");
+            std::fs::create_dir_all(&web_out).map_err(|err| {
+                eprintln!(
+                    "  error: Failed to create web output directory '{}': {}",
+                    web_out.display(),
+                    err
+                );
+            })?;
             let web = aura_backend_web::compile_to_web(&hir);
-            std::fs::write(web_out.join("index.html"), &web.html).unwrap();
-            std::fs::write(web_out.join("styles.css"), &web.css).unwrap();
-            std::fs::write(web_out.join("app.js"), &web.js).unwrap();
+            write_file(web_out.join("index.html"), &web.html, "web/index.html")?;
+            write_file(web_out.join("styles.css"), &web.css, "web/styles.css")?;
+            write_file(web_out.join("app.js"), &web.js, "web/app.js")?;
 
-            // iOS
             let ios_out = out_base.join("ios");
-            std::fs::create_dir_all(&ios_out).expect("Failed to create ios output directory");
+            std::fs::create_dir_all(&ios_out).map_err(|err| {
+                eprintln!(
+                    "  error: Failed to create iOS output directory '{}': {}",
+                    ios_out.display(),
+                    err
+                );
+            })?;
             let ios = aura_backend_swift::compile_to_swift(&hir);
-            std::fs::write(ios_out.join(&ios.filename), &ios.swift).unwrap();
+            write_file(
+                ios_out.join(&ios.filename),
+                &ios.swift,
+                ios.filename.as_str(),
+            )?;
 
-            // Android
             let android_out = out_base.join("android");
-            std::fs::create_dir_all(&android_out).expect("Failed to create android output directory");
+            std::fs::create_dir_all(&android_out).map_err(|err| {
+                eprintln!(
+                    "  error: Failed to create Android output directory '{}': {}",
+                    android_out.display(),
+                    err
+                );
+            })?;
             let android = aura_backend_compose::compile_to_compose(&hir);
-            std::fs::write(android_out.join(&android.filename), &android.kotlin).unwrap();
+            write_file(
+                android_out.join(&android.filename),
+                &android.kotlin,
+                android.filename.as_str(),
+            )?;
 
             eprintln!();
             eprintln!("  Build complete (all platforms):");
@@ -324,27 +364,213 @@ fn build_command(target: &str, path: &str, output_dir: &str, format: Option<&str
         _ => {
             eprintln!("  error: Unknown target '{}'", target);
             eprintln!("  Available targets: web, ios, android, all");
-            std::process::exit(1);
+            return Err(());
         }
     }
 
-    // Save build cache for incremental compilation
-    let source_for_cache = std::fs::read_to_string(path).unwrap_or_default();
-    let mut manifest = aura_core::cache::BuildManifest::load(project_root)
+    save_build_manifest(&context, &current_files, &analysis.errors);
+    Ok(())
+}
+
+fn write_file(path: PathBuf, content: &str, label: &str) -> Result<(), ()> {
+    std::fs::write(&path, content).map_err(|err| {
+        eprintln!(
+            "  error: Failed to write {} ({}): {}",
+            label,
+            path.display(),
+            err
+        );
+    })
+}
+
+fn load_project_context(path: &str) -> Result<ProjectContext, String> {
+    let raw_path = Path::new(path);
+    let target_path = if raw_path.exists() {
+        if raw_path.is_file() {
+            raw_path
+                .parent()
+                .and_then(find_project_root)
+                .unwrap_or_else(|| raw_path.to_path_buf())
+        } else {
+            find_project_root(raw_path).unwrap_or_else(|| raw_path.to_path_buf())
+        }
+    } else if path == "." {
+        let cwd = std::env::current_dir().map_err(|err| err.to_string())?;
+        find_project_root(&cwd).unwrap_or(cwd)
+    } else {
+        return Err(format!("Path '{}' does not exist", path));
+    };
+
+    let project = aura_core::project::load_project(&target_path);
+    let project_root = project.root.clone();
+    let display_path = target_path.display().to_string();
+    let mut sources = HashMap::new();
+
+    for file in &project.files {
+        if let Ok(source) = std::fs::read_to_string(&file.abs_path) {
+            sources.insert(file.path.clone(), source);
+        }
+    }
+
+    Ok(ProjectContext {
+        target_path,
+        project_root,
+        display_path,
+        project,
+        sources,
+    })
+}
+
+fn find_project_root(start: &Path) -> Option<PathBuf> {
+    let start_dir = if start.is_file() {
+        start.parent().unwrap_or(start)
+    } else {
+        start
+    };
+
+    for dir in start_dir.ancestors() {
+        if dir.join("aura.toml").exists() {
+            return Some(dir.to_path_buf());
+        }
+
+        if dir.join("src").join("main.aura").exists() {
+            return Some(dir.to_path_buf());
+        }
+    }
+
+    None
+}
+
+fn print_project_load_errors(context: &ProjectContext, use_json: bool) -> bool {
+    let mut has_errors = false;
+
+    for file in &context.project.files {
+        if let Some(source) = context.sources.get(&file.path) {
+            let parse_result = aura_core::parser::parse(source);
+            if !parse_result.errors.is_empty() {
+                has_errors = true;
+                for err in &parse_result.errors {
+                    if use_json {
+                        print_error_json(err);
+                    } else {
+                        print_error_text(err, source, &file.path);
+                    }
+                }
+            }
+        }
+    }
+
+    for err in context
+        .project
+        .errors
+        .iter()
+        .filter(|err| err.span.start == 0 && err.span.end == 0)
+    {
+        has_errors |= err.is_error();
+        if use_json {
+            print_error_json(err);
+        } else {
+            print_error_text(err, "", &context.display_path);
+        }
+    }
+
+    has_errors
+        || context.project.files.is_empty()
+        || context.project.files.iter().any(|f| f.program.is_none())
+}
+
+fn save_build_manifest(
+    context: &ProjectContext,
+    current_files: &[(String, String)],
+    analysis_errors: &[aura_core::AuraError],
+) {
+    let mut manifest = aura_core::cache::BuildManifest::load(&context.project_root)
         .unwrap_or_else(aura_core::cache::BuildManifest::new);
-    manifest.update_file(
-        path,
-        &aura_core::cache::hash_source(&source_for_cache),
-        0,
-        true,
-        true,
-        Vec::new(),
-    );
+
+    let current_hashes: HashMap<String, String> = current_files.iter().cloned().collect();
+    let current_set: HashSet<String> = current_hashes.keys().cloned().collect();
+    let stale_files: Vec<String> = manifest
+        .files
+        .keys()
+        .filter(|path| !current_set.contains(path.as_str()))
+        .cloned()
+        .collect();
+
+    for stale in stale_files {
+        manifest.remove_file(&stale);
+    }
+
+    let check_ok = !analysis_errors.iter().any(|err| err.is_error());
+
+    for file in &context.project.files {
+        let Some(hash) = current_hashes.get(&file.path) else {
+            continue;
+        };
+
+        let declarations = file
+            .program
+            .as_ref()
+            .map(|program| program.app.members.len())
+            .unwrap_or(0);
+        let exports = file
+            .program
+            .as_ref()
+            .map(|program| {
+                program
+                    .app
+                    .members
+                    .iter()
+                    .map(export_name)
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        manifest.update_file(
+            &file.path,
+            hash,
+            declarations,
+            file.program.is_some(),
+            check_ok,
+            exports,
+        );
+
+        let dependencies = file
+            .imports
+            .iter()
+            .filter_map(|import| import.resolved_path.as_deref())
+            .map(|resolved_path| {
+                let resolved = Path::new(resolved_path);
+                resolved
+                    .strip_prefix(&context.project_root)
+                    .unwrap_or(resolved)
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .collect();
+        manifest.set_dependencies(&file.path, dependencies);
+    }
+
     manifest.last_build = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .map(|d| d.as_secs())
+        .map(|duration| duration.as_secs())
         .unwrap_or(0);
-    let _ = manifest.save(project_root);
+    let _ = manifest.save(&context.project_root);
+}
+
+fn export_name(member: &aura_core::ast::AppMember) -> String {
+    match member {
+        aura_core::ast::AppMember::Model(model) => model.name.clone(),
+        aura_core::ast::AppMember::Screen(screen) => screen.name.clone(),
+        aura_core::ast::AppMember::Component(component) => component.name.clone(),
+        aura_core::ast::AppMember::Fn(function) => function.name.clone(),
+        aura_core::ast::AppMember::Const(constant) => constant.name.clone(),
+        aura_core::ast::AppMember::State(state) => state.name.clone(),
+        aura_core::ast::AppMember::ThemeRef(_) => "theme".to_string(),
+        aura_core::ast::AppMember::NavigationDecl(_) => "navigation".to_string(),
+        aura_core::ast::AppMember::RouteDecl(route) => route.pattern.clone(),
+        aura_core::ast::AppMember::Style(style) => style.name.clone(),
+        aura_core::ast::AppMember::Theme(theme) => theme.name.clone(),
+    }
 }
 
 fn print_error_text(err: &aura_core::AuraError, source: &str, file: &str) {
@@ -354,11 +580,13 @@ fn print_error_text(err: &aura_core::AuraError, source: &str, file: &str) {
         aura_core::Severity::Info => "info",
     };
 
-    // Find line and column from byte offset
-    let (line, col) = byte_to_line_col(source, err.span.start);
-
     eprintln!("  {}[{}]: {}", severity, err.code, err.message);
-    eprintln!("    --> {}:{}:{}", file, line, col);
+    if source.is_empty() {
+        eprintln!("    --> {}", file);
+    } else {
+        let (line, col) = byte_to_line_col(source, err.span.start);
+        eprintln!("    --> {}:{}:{}", file, line, col);
+    }
 
     if let Some(ref help) = err.help {
         eprintln!("    = help: {}", help);
@@ -396,8 +624,8 @@ fn print_error_json(err: &aura_core::AuraError) {
 fn byte_to_line_col(source: &str, byte_offset: usize) -> (usize, usize) {
     let mut line = 1;
     let mut col = 1;
-    for (i, ch) in source.char_indices() {
-        if i >= byte_offset {
+    for (index, ch) in source.char_indices() {
+        if index >= byte_offset {
             break;
         }
         if ch == '\n' {
@@ -411,10 +639,81 @@ fn byte_to_line_col(source: &str, byte_offset: usize) -> (usize, usize) {
 }
 
 fn fmt_command(path: &str, check: bool) {
+    let input_path = Path::new(path);
+    if input_path.exists() && input_path.is_file() {
+        let formatted = format_file(input_path, check);
+        if check && !formatted {
+            eprintln!("  {} needs formatting", input_path.display());
+            std::process::exit(1);
+        }
+        if check && formatted {
+            eprintln!("  {} is already formatted", input_path.display());
+        }
+        return;
+    }
+
+    let target_path = if input_path.exists() && input_path.is_dir() {
+        find_project_root(input_path).unwrap_or_else(|| input_path.to_path_buf())
+    } else if path == "." {
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        find_project_root(&cwd).unwrap_or(cwd)
+    } else {
+        eprintln!("  error: Path '{}' does not exist", path);
+        std::process::exit(1);
+    };
+
+    let project = aura_core::project::load_project(&target_path);
+    if project.files.is_empty() {
+        eprintln!(
+            "  error: No .aura files found under '{}'",
+            target_path.display()
+        );
+        std::process::exit(1);
+    }
+
+    let mut needs_formatting = Vec::new();
+    for file in &project.files {
+        if !format_file(&file.abs_path, true) {
+            needs_formatting.push(file.path.clone());
+        }
+    }
+
+    if check {
+        if needs_formatting.is_empty() {
+            eprintln!(
+                "  All Aura files are formatted in {}",
+                target_path.display()
+            );
+        } else {
+            eprintln!(
+                "  {} file(s) need formatting in {}",
+                needs_formatting.len(),
+                target_path.display()
+            );
+            for file in needs_formatting {
+                eprintln!("    {}", file);
+            }
+            std::process::exit(1);
+        }
+        return;
+    }
+
+    for file in &project.files {
+        let _ = format_file(&file.abs_path, false);
+    }
+
+    eprintln!(
+        "  Formatted {} Aura file(s) in {}",
+        project.files.len(),
+        target_path.display()
+    );
+}
+
+fn format_file(path: &Path, check: bool) -> bool {
     let source = match std::fs::read_to_string(path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("  error: Cannot read '{}': {}", path, e);
+        Ok(source) => source,
+        Err(err) => {
+            eprintln!("  error: Cannot read '{}': {}", path.display(), err);
             std::process::exit(1);
         }
     };
@@ -423,18 +722,17 @@ fn fmt_command(path: &str, check: bool) {
     if let Some(ref program) = result.program {
         let formatted = aura_core::fmt::format(program);
         if check {
-            if formatted == source {
-                eprintln!("  {} is already formatted", path);
-            } else {
-                eprintln!("  {} needs formatting", path);
-                std::process::exit(1);
-            }
+            formatted == source
         } else {
             std::fs::write(path, &formatted).expect("Failed to write formatted file");
-            eprintln!("  Formatted: {}", path);
+            eprintln!("  Formatted: {}", path.display());
+            true
         }
     } else {
-        eprintln!("  error: Cannot format '{}' — parse errors:", path);
+        eprintln!(
+            "  error: Cannot format '{}' — parse errors:",
+            path.display()
+        );
         for err in &result.errors {
             eprintln!("    {}", err.message);
         }
@@ -444,9 +742,9 @@ fn fmt_command(path: &str, check: bool) {
 
 fn explain_command(file: &str) {
     let source = match std::fs::read_to_string(file) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("  error: Cannot read '{}': {}", file, e);
+        Ok(source) => source,
+        Err(err) => {
+            eprintln!("  error: Cannot read '{}': {}", file, err);
             std::process::exit(1);
         }
     };
@@ -467,16 +765,16 @@ fn explain_command(file: &str) {
 
 fn diff_command(file_a: &str, file_b: &str) {
     let source_a = match std::fs::read_to_string(file_a) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("  error: Cannot read '{}': {}", file_a, e);
+        Ok(source) => source,
+        Err(err) => {
+            eprintln!("  error: Cannot read '{}': {}", file_a, err);
             std::process::exit(1);
         }
     };
     let source_b = match std::fs::read_to_string(file_b) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("  error: Cannot read '{}': {}", file_b, e);
+        Ok(source) => source,
+        Err(err) => {
+            eprintln!("  error: Cannot read '{}': {}", file_b, err);
             std::process::exit(1);
         }
     };
@@ -485,14 +783,14 @@ fn diff_command(file_a: &str, file_b: &str) {
     let result_b = aura_core::parser::parse(&source_b);
 
     let program_a = match result_a.program {
-        Some(p) => p,
+        Some(program) => program,
         None => {
             eprintln!("  error: Failed to parse '{}'", file_a);
             std::process::exit(1);
         }
     };
     let program_b = match result_b.program {
-        Some(p) => p,
+        Some(program) => program,
         None => {
             eprintln!("  error: Failed to parse '{}'", file_b);
             std::process::exit(1);
@@ -518,35 +816,34 @@ fn sketch_command(description: &str) {
 
     let code = aura_core::sketch::sketch(description);
 
-    // Verify it parses
     let result = aura_core::parser::parse(&code);
     if result.program.is_none() {
         eprintln!("  warning: generated code has parse issues (template bug)");
     }
 
-    // Write to file
     let filename = "sketch.aura";
     std::fs::write(filename, &code).expect("Failed to write sketch.aura");
 
     eprintln!("  Generated: {} ({} lines)", filename, code.lines().count());
     eprintln!();
 
-    // Also print to stdout
     println!("{}", code);
 
     eprintln!("  Building preview...");
 
-    // Auto-build for web
-    let hir = aura_core::hir::build_hir(result.program.as_ref().unwrap());
-    let output = aura_backend_web::compile_to_web(&hir);
+    if let Some(ref program) = result.program {
+        let hir = aura_core::hir::build_hir(program);
+        let output = aura_backend_web::compile_to_web(&hir);
 
-    let out_dir = "build/sketch";
-    std::fs::create_dir_all(out_dir).ok();
-    std::fs::write(format!("{}/index.html", out_dir), &output.html).ok();
-    std::fs::write(format!("{}/styles.css", out_dir), &output.css).ok();
-    std::fs::write(format!("{}/app.js", out_dir), &output.js).ok();
+        let out_dir = "build/sketch";
+        std::fs::create_dir_all(out_dir).ok();
+        std::fs::write(format!("{}/index.html", out_dir), &output.html).ok();
+        std::fs::write(format!("{}/styles.css", out_dir), &output.css).ok();
+        std::fs::write(format!("{}/app.js", out_dir), &output.js).ok();
 
-    eprintln!("  Preview: {}/index.html", out_dir);
+        eprintln!("  Preview: {}/index.html", out_dir);
+    }
+
     eprintln!();
     eprintln!("  Open sketch.aura to customize, or run:");
     eprintln!("    aura build sketch.aura --target all");
@@ -559,20 +856,18 @@ fn init_command(name: &str, template: &str) {
         std::process::exit(1);
     }
 
-    let app_name = Path::new(name)
+    let raw_name = dir
         .file_name()
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
-    let app_name = if app_name.is_empty() { "MyApp".to_string() } else {
-        let mut chars = app_name.chars();
-        chars.next().map(|c| c.to_uppercase().to_string()).unwrap_or_default() + chars.as_str()
-    };
+    let app_name = to_app_name(&raw_name);
+    let app_title = to_display_name(&raw_name);
 
     std::fs::create_dir_all(dir.join("src")).expect("Failed to create project directory");
 
-    // aura.toml
-    let toml = format!(r#"[app]
+    let toml = format!(
+        r#"[app]
 name = "{}"
 version = "0.1.0"
 aura-version = "0.1.0"
@@ -584,149 +879,149 @@ android = true
 
 [theme]
 default = "modern.light"
-"#, app_name);
+"#,
+        app_name
+    );
     std::fs::write(dir.join("aura.toml"), toml).expect("Failed to write aura.toml");
 
-    // src/main.aura
     let main_aura = match template {
         "counter" => aura_core::sketch::sketch("counter app"),
         "todo" => aura_core::sketch::sketch("todo app with filter"),
         "chat" => aura_core::sketch::sketch("chat app"),
-        _ => format!(r#"app {}
+        _ => format!(
+            r#"app {}
   theme: modern.light
 
   screen Main
     view
       column gap.lg padding.2xl align.center
         heading "{}" size.2xl .bold
-        text "Welcome to your new Aura app!" .secondary
+        text "Edit src/main.aura, then run aura build or aura run." .secondary
         button "Get Started" .accent .pill -> getStarted()
 
     action getStarted
       return
-"#, app_name, app_name),
+"#,
+            app_name, app_title
+        ),
     };
     std::fs::write(dir.join("src/main.aura"), main_aura).expect("Failed to write main.aura");
 
-    // .gitignore
-    std::fs::write(dir.join(".gitignore"), "build/\n").ok();
+    let readme = format!(
+        "# {title}\n\nGenerated with `aura init`.\n\n## Project workflow\n\n```bash\naura run\naura build\naura build --target all\naura fmt\naura doctor\n```\n\n## Structure\n\n- `src/main.aura` — app entry point\n- `build/` — generated output\n- `.aura-cache/` — incremental build cache\n",
+        title = app_title
+    );
+    std::fs::write(dir.join("README.md"), readme).expect("Failed to write README.md");
+
+    std::fs::write(dir.join(".gitignore"), "build/\n.aura-cache/\n").ok();
 
     eprintln!();
     eprintln!("  Created project: {}/", name);
     eprintln!();
     eprintln!("  {}/aura.toml       Project configuration", name);
     eprintln!("  {}/src/main.aura   Entry point", name);
+    eprintln!("  {}/README.md       Project workflow", name);
     eprintln!();
     eprintln!("  Next steps:");
     eprintln!("    cd {}", name);
-    eprintln!("    aura build src/main.aura --target web");
-    eprintln!("    aura build src/main.aura --target all");
+    eprintln!("    aura run");
+    eprintln!("    aura build");
+    eprintln!("    aura build --target all");
 }
 
 fn run_command(target: &str, port: u16) {
     use std::io::{Read as _, Write as _};
     use std::net::TcpListener;
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
-    // Find .aura file
-    let source_file = if Path::new("src/main.aura").exists() {
-        "src/main.aura".to_string()
-    } else {
-        let mut found = None;
-        if let Ok(entries) = std::fs::read_dir(".") {
-            for entry in entries.flatten() {
-                if entry.path().extension().map(|e| e == "aura").unwrap_or(false) {
-                    found = Some(entry.path().to_string_lossy().to_string());
-                    break;
-                }
-            }
-        }
-        match found {
-            Some(f) => f,
-            None => {
-                eprintln!("  error: No .aura file found.");
-                std::process::exit(1);
-            }
-        }
-    };
+    if target != "web" {
+        eprintln!("  error: `aura run` currently serves web output only.");
+        eprintln!(
+            "  hint: Use `aura run` for web preview and `aura build --target all` for multi-platform output."
+        );
+        std::process::exit(1);
+    }
 
-    let build_dir = "build/dev";
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let project_root = find_project_root(&cwd).unwrap_or(cwd);
+    let project_label = project_root.display().to_string();
+    let build_dir = Path::new("build/dev");
 
     eprintln!();
     eprintln!("  aura run — dev server with file watching");
-    eprintln!("  Source: {}", source_file);
+    eprintln!("  Project: {}", project_label);
     eprintln!();
 
-    // Initial build
-    build_command(target, &source_file, build_dir, None);
-
-    // Inject live-reload script
-    let html_path = Path::new(build_dir).join("index.html");
-    if let Ok(html) = std::fs::read_to_string(&html_path) {
-        let reload_script = "<script>setInterval(()=>fetch('/__reload').then(r=>r.text()).then(v=>{if(v==='yes')location.reload()}),500)</script>";
-        let patched = html.replace("</body>", &format!("{}\n</body>", reload_script));
-        std::fs::write(&html_path, patched).ok();
+    if try_build_command(
+        target,
+        &project_label,
+        build_dir.to_string_lossy().as_ref(),
+        None,
+    )
+    .is_err()
+    {
+        std::process::exit(1);
     }
+    inject_reload_script(build_dir);
 
-    // File watcher — rebuild on .aura file changes
     let changed = Arc::new(AtomicBool::new(false));
     let changed_clone = changed.clone();
-    let source_clone = source_file.clone();
-    let target_clone = target.to_string();
+    let root_clone = project_root.clone();
+    let build_label = build_dir.to_string_lossy().to_string();
 
     std::thread::spawn(move || {
-        use notify::{Watcher, RecursiveMode, Event, EventKind};
+        use notify::{Event, EventKind, RecursiveMode, Watcher};
         let (tx, rx) = std::sync::mpsc::channel();
 
         let mut watcher = notify::recommended_watcher(move |res: Result<Event, _>| {
             if let Ok(event) = res {
                 if matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
-                    let has_aura = event.paths.iter().any(|p| {
-                        p.extension().map(|e| e == "aura").unwrap_or(false)
+                    let should_rebuild = event.paths.iter().any(|path| {
+                        path.extension().map(|ext| ext == "aura").unwrap_or(false)
+                            || path
+                                .file_name()
+                                .map(|name| name == "aura.toml")
+                                .unwrap_or(false)
                     });
-                    if has_aura {
+                    if should_rebuild {
                         tx.send(()).ok();
                     }
                 }
             }
-        }).expect("Failed to create file watcher");
+        })
+        .expect("Failed to create file watcher");
 
-        // Watch current directory and src/
-        watcher.watch(Path::new("."), RecursiveMode::Recursive).ok();
-
+        watcher.watch(&root_clone, RecursiveMode::Recursive).ok();
         eprintln!("  Watching for file changes...");
 
         loop {
-            // Wait for a change event
-            if rx.recv().is_err() { break; }
-            // Debounce: wait 200ms for more changes
+            if rx.recv().is_err() {
+                break;
+            }
             std::thread::sleep(std::time::Duration::from_millis(200));
-            while rx.try_recv().is_ok() {} // drain extra events
+            while rx.try_recv().is_ok() {}
 
             eprintln!();
             eprintln!("  File changed — rebuilding...");
-            build_command(&target_clone, &source_clone, "build/dev", None);
-
-            // Re-inject reload script
-            let html_path = Path::new("build/dev").join("index.html");
-            if let Ok(html) = std::fs::read_to_string(&html_path) {
-                let reload_script = "<script>setInterval(()=>fetch('/__reload').then(r=>r.text()).then(v=>{if(v==='yes')location.reload()}),500)</script>";
-                let patched = html.replace("</body>", &format!("{}\n</body>", reload_script));
-                std::fs::write(&html_path, patched).ok();
+            match try_build_command("web", &root_clone.display().to_string(), &build_label, None) {
+                Ok(()) => {
+                    inject_reload_script(Path::new(&build_label));
+                    changed_clone.store(true, Ordering::SeqCst);
+                    eprintln!("  Ready — browser will reload automatically");
+                }
+                Err(()) => {
+                    eprintln!("  Rebuild failed — keeping the last successful preview");
+                }
             }
-
-            changed_clone.store(true, Ordering::SeqCst);
-            eprintln!("  Ready — browser will reload automatically");
         }
     });
 
-    // HTTP server
     let addr = format!("127.0.0.1:{}", port);
     let listener = match TcpListener::bind(&addr) {
-        Ok(l) => l,
-        Err(e) => {
-            eprintln!("  error: Cannot bind to {}: {}", addr, e);
+        Ok(listener) => listener,
+        Err(err) => {
+            eprintln!("  error: Cannot bind to {}: {}", addr, err);
             std::process::exit(1);
         }
     };
@@ -738,8 +1033,8 @@ fn run_command(target: &str, port: u16) {
     for stream in listener.incoming() {
         if let Ok(mut stream) = stream {
             let mut buf = [0u8; 4096];
-            let n = stream.read(&mut buf).unwrap_or(0);
-            let request = String::from_utf8_lossy(&buf[..n]);
+            let read = stream.read(&mut buf).unwrap_or(0);
+            let request = String::from_utf8_lossy(&buf[..read]);
 
             let path = request
                 .lines()
@@ -747,41 +1042,46 @@ fn run_command(target: &str, port: u16) {
                 .and_then(|line| line.split_whitespace().nth(1))
                 .unwrap_or("/");
 
-            // Live-reload endpoint
             if path == "/__reload" {
                 let should_reload = changed.swap(false, Ordering::SeqCst);
                 let body = if should_reload { "yes" } else { "no" };
-                let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n{}", body.len(), body);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
                 stream.write_all(response.as_bytes()).ok();
                 continue;
             }
 
             let file_path = if path == "/" || path == "/index.html" {
-                format!("{}/index.html", build_dir)
+                build_dir.join("index.html")
             } else if path == "/ping" {
                 let response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok";
                 stream.write_all(response.as_bytes()).ok();
                 continue;
             } else {
-                format!("{}{}", build_dir, path)
+                build_dir.join(path.trim_start_matches('/'))
             };
 
             let (status, content_type, body) = if let Ok(body) = std::fs::read(&file_path) {
-                let ct = match Path::new(&file_path).extension().and_then(|e| e.to_str()) {
+                let content_type = match file_path.extension().and_then(|ext| ext.to_str()) {
                     Some("html") => "text/html; charset=utf-8",
                     Some("css") => "text/css; charset=utf-8",
                     Some("js") => "application/javascript; charset=utf-8",
                     Some("json") => "application/json; charset=utf-8",
                     _ => "application/octet-stream",
                 };
-                ("200 OK", ct, body)
+                ("200 OK", content_type, body)
             } else {
                 ("404 Not Found", "text/plain", b"Not found".to_vec())
             };
 
             let response = format!(
                 "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\n\r\n",
-                status, content_type, body.len()
+                status,
+                content_type,
+                body.len()
             );
             stream.write_all(response.as_bytes()).ok();
             stream.write_all(&body).ok();
@@ -789,11 +1089,26 @@ fn run_command(target: &str, port: u16) {
     }
 }
 
+fn inject_reload_script(build_dir: &Path) {
+    let html_path = build_dir.join("index.html");
+    let reload_script = "<script>setInterval(()=>fetch('/__reload').then(r=>r.text()).then(v=>{if(v==='yes')location.reload()}),500)</script>";
+
+    if let Ok(html) = std::fs::read_to_string(&html_path) {
+        if html.contains(reload_script) {
+            return;
+        }
+        let patched = html.replace("</body>", &format!("{}\n</body>", reload_script));
+        std::fs::write(&html_path, patched).ok();
+    }
+}
+
 fn agent_serve() {
     let server = aura_agent::AgentServer::new();
     eprintln!("  Aura Agent API v{}", env!("CARGO_PKG_VERSION"));
     eprintln!("  Listening on stdin/stdout (JSON-RPC 2.0)");
-    eprintln!("  Send {{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"params\":{{}}}} to test");
+    eprintln!(
+        "  Send {{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"params\":{{}}}} to test"
+    );
     eprintln!();
 
     let stdin = std::io::stdin();
@@ -801,7 +1116,7 @@ fn agent_serve() {
     loop {
         line.clear();
         match stdin.read_line(&mut line) {
-            Ok(0) => break, // EOF
+            Ok(0) => break,
             Ok(_) => {
                 let trimmed = line.trim();
                 if trimmed.is_empty() {
@@ -810,8 +1125,8 @@ fn agent_serve() {
                 let response = server.handle_json(trimmed);
                 println!("{}", response);
             }
-            Err(e) => {
-                eprintln!("  error reading stdin: {}", e);
+            Err(err) => {
+                eprintln!("  error reading stdin: {}", err);
                 break;
             }
         }
@@ -819,8 +1134,8 @@ fn agent_serve() {
 }
 
 fn agent_call(method: &str, params_str: &str) {
-    let params: serde_json::Value = serde_json::from_str(params_str).unwrap_or_else(|e| {
-        eprintln!("  error: Invalid JSON params: {}", e);
+    let params: serde_json::Value = serde_json::from_str(params_str).unwrap_or_else(|err| {
+        eprintln!("  error: Invalid JSON params: {}", err);
         std::process::exit(1);
     });
 
@@ -843,11 +1158,15 @@ fn doctor_command() {
 
     let mut all_ok = true;
 
-    // Check Rust
-    let rust_ok = std::process::Command::new("rustc").arg("--version").output().is_ok();
+    let rust_ok = std::process::Command::new("rustc")
+        .arg("--version")
+        .output()
+        .is_ok();
     if rust_ok {
-        let version = std::process::Command::new("rustc").arg("--version").output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        let version = std::process::Command::new("rustc")
+            .arg("--version")
+            .output()
+            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
             .unwrap_or_default();
         eprintln!("  [ok] Rust: {}", version);
     } else {
@@ -855,8 +1174,10 @@ fn doctor_command() {
         all_ok = false;
     }
 
-    // Check Cargo
-    let cargo_ok = std::process::Command::new("cargo").arg("--version").output().is_ok();
+    let cargo_ok = std::process::Command::new("cargo")
+        .arg("--version")
+        .output()
+        .is_ok();
     if cargo_ok {
         eprintln!("  [ok] Cargo: installed");
     } else {
@@ -864,9 +1185,7 @@ fn doctor_command() {
         all_ok = false;
     }
 
-    // Check for web target (Node.js — optional, for dev server)
-    let node_ok = std::process::Command::new("node").arg("--version").output();
-    match node_ok {
+    match std::process::Command::new("node").arg("--version").output() {
         Ok(output) if output.status.success() => {
             let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
             eprintln!("  [ok] Node.js: {} (for web dev server)", version);
@@ -876,11 +1195,16 @@ fn doctor_command() {
         }
     }
 
-    // Check for iOS target (Xcode)
-    let xcode_ok = std::process::Command::new("xcodebuild").arg("-version").output();
-    match xcode_ok {
+    match std::process::Command::new("xcodebuild")
+        .arg("-version")
+        .output()
+    {
         Ok(output) if output.status.success() => {
-            let version = String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").to_string();
+            let version = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()
+                .unwrap_or("")
+                .to_string();
             eprintln!("  [ok] Xcode: {} (for iOS/macOS target)", version);
         }
         _ => {
@@ -888,9 +1212,7 @@ fn doctor_command() {
         }
     }
 
-    // Check for Android target
-    let android_home = std::env::var("ANDROID_HOME").or_else(|_| std::env::var("ANDROID_SDK_ROOT"));
-    match android_home {
+    match std::env::var("ANDROID_HOME").or_else(|_| std::env::var("ANDROID_SDK_ROOT")) {
         Ok(path) => {
             eprintln!("  [ok] Android SDK: {} (for Android target)", path);
         }
@@ -899,18 +1221,33 @@ fn doctor_command() {
         }
     }
 
-    // Check for iOS target (save result)
-    let ios_ready = std::process::Command::new("xcodebuild")
-        .arg("-version")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-
-    // Check for Android target (save result)
-    let android_ready = std::env::var("ANDROID_HOME").is_ok() || std::env::var("ANDROID_SDK_ROOT").is_ok();
-
-    // Check Aura itself
     eprintln!("  [ok] Aura: v{}", env!("CARGO_PKG_VERSION"));
+
+    if let Ok(cwd) = std::env::current_dir() {
+        if let Some(project_root) = find_project_root(&cwd) {
+            let project = aura_core::project::load_project(&project_root);
+            let project_errors = project.errors.iter().filter(|err| err.is_error()).count();
+            if project_errors == 0 && !project.files.is_empty() {
+                eprintln!(
+                    "  [ok] Project: {} ({} Aura files)",
+                    project_root.display(),
+                    project.files.len()
+                );
+            } else {
+                eprintln!(
+                    "  [!!] Project: {} ({} blocking issue(s))",
+                    project_root.display(),
+                    project_errors.max(1)
+                );
+                all_ok = false;
+            }
+        } else {
+            eprintln!(
+                "  [--] Project: no Aura project detected in {}",
+                cwd.display()
+            );
+        }
+    }
 
     eprintln!();
     if all_ok {
@@ -918,12 +1255,94 @@ fn doctor_command() {
     } else {
         eprintln!("  Some required tools are missing. Install them and run `aura doctor` again.");
     }
+}
 
-    // Target readiness
-    eprintln!();
-    eprintln!("  Target readiness:");
-    eprintln!("    web:     Ready (no external dependencies)");
-    eprintln!("    ios:     {}", if ios_ready { "Ready" } else { "Needs Xcode" });
-    eprintln!("    android: {}", if android_ready { "Ready" } else { "Needs Android SDK" });
-    eprintln!();
+fn to_app_name(name: &str) -> String {
+    let mut words = name
+        .split(|ch: char| !ch.is_ascii_alphanumeric())
+        .filter(|segment| !segment.is_empty())
+        .map(|segment| {
+            let mut chars = segment.chars();
+            let head = chars
+                .next()
+                .map(|ch| ch.to_ascii_uppercase().to_string())
+                .unwrap_or_default();
+            let tail = chars.as_str().to_ascii_lowercase();
+            format!("{}{}", head, tail)
+        })
+        .collect::<String>();
+
+    if words.is_empty() {
+        words = "MyApp".to_string();
+    }
+
+    if words
+        .chars()
+        .next()
+        .map(|ch| ch.is_ascii_digit())
+        .unwrap_or(false)
+    {
+        format!("App{}", words)
+    } else {
+        words
+    }
+}
+
+fn to_display_name(name: &str) -> String {
+    let title = name
+        .split(|ch: char| ch == '-' || ch == '_' || ch.is_whitespace())
+        .filter(|segment| !segment.is_empty())
+        .map(|segment| {
+            let mut chars = segment.chars();
+            let head = chars
+                .next()
+                .map(|ch| ch.to_ascii_uppercase().to_string())
+                .unwrap_or_default();
+            let tail = chars.as_str().to_ascii_lowercase();
+            format!("{}{}", head, tail)
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    if title.is_empty() {
+        "My App".to_string()
+    } else {
+        title
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_app_name_kebab_case_expected() {
+        assert_eq!(to_app_name("task-flow"), "TaskFlow");
+    }
+
+    #[test]
+    fn test_to_app_name_numeric_prefix_expected() {
+        assert_eq!(to_app_name("360-labs"), "App360Labs");
+    }
+
+    #[test]
+    fn test_find_project_root_walks_up_expected() {
+        let unique = format!(
+            "aura-cli-test-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        let root = std::env::temp_dir().join(unique);
+        let nested = root.join("src/screens");
+
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(root.join("aura.toml"), "[app]\nname = \"Test\"\n").unwrap();
+
+        assert_eq!(find_project_root(&nested), Some(root.clone()));
+
+        let _ = std::fs::remove_file(root.join("aura.toml"));
+        let _ = std::fs::remove_dir_all(root);
+    }
 }

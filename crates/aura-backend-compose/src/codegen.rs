@@ -1,7 +1,7 @@
 //! Jetpack Compose codegen: HIR → Kotlin source code
 
-use aura_core::hir::*;
 use aura_core::design;
+use aura_core::hir::*;
 
 pub struct ComposeOutput {
     pub kotlin: String,
@@ -25,19 +25,30 @@ struct ComposeCodegen<'a> {
 
 impl<'a> ComposeCodegen<'a> {
     fn new(module: &'a HIRModule) -> Self {
-        Self { module, out: String::new(), indent: 0 }
+        Self {
+            module,
+            out: String::new(),
+            indent: 0,
+        }
     }
 
     fn line(&mut self, text: &str) {
-        for _ in 0..self.indent { self.out.push_str("    "); }
+        for _ in 0..self.indent {
+            self.out.push_str("    ");
+        }
         self.out.push_str(text);
         self.out.push('\n');
     }
 
-    fn blank(&mut self) { self.out.push('\n'); }
+    fn blank(&mut self) {
+        self.out.push('\n');
+    }
 
     fn generate(&mut self) {
-        self.line(&format!("package com.aura.{}", self.module.app.name.to_lowercase()));
+        self.line(&format!(
+            "package com.aura.{}",
+            self.module.app.name.to_lowercase()
+        ));
         self.blank();
         self.line("import android.os.Bundle");
         self.line("import androidx.activity.ComponentActivity");
@@ -73,7 +84,10 @@ impl<'a> ComposeCodegen<'a> {
         }
 
         // Activity
-        self.line(&format!("class {}Activity : ComponentActivity() {{", self.module.app.name));
+        self.line(&format!(
+            "class {}Activity : ComponentActivity() {{",
+            self.module.app.name
+        ));
         self.indent += 1;
         self.line("override fun onCreate(savedInstanceState: Bundle?) {");
         self.indent += 1;
@@ -96,14 +110,18 @@ impl<'a> ComposeCodegen<'a> {
     }
 
     fn emit_model(&mut self, model: &HIRModel) {
-        let fields: Vec<String> = model.fields.iter().map(|f| {
-            let kt = self.type_to_kotlin(&f.field_type);
-            if let Some(ref default) = f.default {
-                format!("val {}: {} = {}", f.name, kt, self.expr_to_kotlin(default))
-            } else {
-                format!("val {}: {}", f.name, kt)
-            }
-        }).collect();
+        let fields: Vec<String> = model
+            .fields
+            .iter()
+            .map(|f| {
+                let kt = self.type_to_kotlin(&f.field_type);
+                if let Some(ref default) = f.default {
+                    format!("val {}: {} = {}", f.name, kt, self.expr_to_kotlin(default))
+                } else {
+                    format!("val {}: {}", f.name, kt)
+                }
+            })
+            .collect();
         self.line(&format!("data class {}(", model.name));
         self.indent += 1;
         for (i, field) in fields.iter().enumerate() {
@@ -116,16 +134,24 @@ impl<'a> ComposeCodegen<'a> {
 
     fn emit_screen(&mut self, screen: &HIRScreen) {
         self.line("@Composable");
-        let params: Vec<String> = screen.params.iter().map(|p| {
-            format!("{}: {}", p.name, self.type_to_kotlin(&p.param_type))
-        }).collect();
-        self.line(&format!("fun {}Screen({}) {{", screen.name, params.join(", ")));
+        let params: Vec<String> = screen
+            .params
+            .iter()
+            .map(|p| format!("{}: {}", p.name, self.type_to_kotlin(&p.param_type)))
+            .collect();
+        self.line(&format!(
+            "fun {}Screen({}) {{",
+            screen.name,
+            params.join(", ")
+        ));
         self.indent += 1;
 
         // State
         for state in &screen.state {
             let kt = self.type_to_kotlin(&state.state_type);
-            let default = state.initial.as_ref()
+            let default = state
+                .initial
+                .as_ref()
                 .map(|e| self.expr_to_kotlin(e))
                 .unwrap_or_else(|| self.default_value(&state.state_type));
             self.line(&format!(
@@ -133,7 +159,9 @@ impl<'a> ComposeCodegen<'a> {
                 state.name, kt, default, ""
             ));
         }
-        if !screen.state.is_empty() { self.blank(); }
+        if !screen.state.is_empty() {
+            self.blank();
+        }
 
         // Helper functions (inline)
         for func in &screen.functions {
@@ -152,20 +180,26 @@ impl<'a> ComposeCodegen<'a> {
 
     fn emit_component(&mut self, comp: &HIRComponent) {
         self.line("@Composable");
-        let props: Vec<String> = comp.props.iter().map(|p| {
-            let kt = self.type_to_kotlin(&p.param_type);
-            if let Some(ref default) = p.default {
-                format!("{}: {} = {}", p.name, kt, self.expr_to_kotlin(default))
-            } else {
-                format!("{}: {}", p.name, kt)
-            }
-        }).collect();
+        let props: Vec<String> = comp
+            .props
+            .iter()
+            .map(|p| {
+                let kt = self.type_to_kotlin(&p.param_type);
+                if let Some(ref default) = p.default {
+                    format!("{}: {} = {}", p.name, kt, self.expr_to_kotlin(default))
+                } else {
+                    format!("{}: {}", p.name, kt)
+                }
+            })
+            .collect();
         self.line(&format!("fun {}({}) {{", comp.name, props.join(", ")));
         self.indent += 1;
 
         for state in &comp.state {
             let kt = self.type_to_kotlin(&state.state_type);
-            let default = state.initial.as_ref()
+            let default = state
+                .initial
+                .as_ref()
                 .map(|e| self.expr_to_kotlin(e))
                 .unwrap_or_else(|| self.default_value(&state.state_type));
             self.line(&format!(
@@ -185,25 +219,37 @@ impl<'a> ComposeCodegen<'a> {
             HIRView::Column(layout) => {
                 let mods = self.layout_modifier(&layout.design);
                 let spacing = self.spacing_dp(&layout.design);
-                self.line(&format!("Column({}verticalArrangement = Arrangement.spacedBy({}.dp)) {{", mods, spacing));
+                self.line(&format!(
+                    "Column({}verticalArrangement = Arrangement.spacedBy({}.dp)) {{",
+                    mods, spacing
+                ));
                 self.indent += 1;
-                for child in &layout.children { self.emit_view(child); }
+                for child in &layout.children {
+                    self.emit_view(child);
+                }
                 self.indent -= 1;
                 self.line("}");
             }
             HIRView::Row(layout) => {
                 let mods = self.layout_modifier(&layout.design);
                 let spacing = self.spacing_dp(&layout.design);
-                self.line(&format!("Row({}horizontalArrangement = Arrangement.spacedBy({}.dp)) {{", mods, spacing));
+                self.line(&format!(
+                    "Row({}horizontalArrangement = Arrangement.spacedBy({}.dp)) {{",
+                    mods, spacing
+                ));
                 self.indent += 1;
-                for child in &layout.children { self.emit_view(child); }
+                for child in &layout.children {
+                    self.emit_view(child);
+                }
                 self.indent -= 1;
                 self.line("}");
             }
             HIRView::Stack(layout) => {
                 self.line("Box {");
                 self.indent += 1;
-                for child in &layout.children { self.emit_view(child); }
+                for child in &layout.children {
+                    self.emit_view(child);
+                }
                 self.indent -= 1;
                 self.line("}");
             }
@@ -212,7 +258,9 @@ impl<'a> ComposeCodegen<'a> {
                 self.indent += 1;
                 self.line("items(/* collection */) { item ->");
                 self.indent += 1;
-                for child in &grid.children { self.emit_view(child); }
+                for child in &grid.children {
+                    self.emit_view(child);
+                }
                 self.indent -= 1;
                 self.line("}");
                 self.indent -= 1;
@@ -221,7 +269,9 @@ impl<'a> ComposeCodegen<'a> {
             HIRView::Scroll(scroll) => {
                 self.line("Column(modifier = Modifier.verticalScroll(rememberScrollState())) {");
                 self.indent += 1;
-                for child in &scroll.children { self.emit_view(child); }
+                for child in &scroll.children {
+                    self.emit_view(child);
+                }
                 self.indent -= 1;
                 self.line("}");
             }
@@ -233,7 +283,10 @@ impl<'a> ComposeCodegen<'a> {
             HIRView::Heading(heading) => {
                 let content = self.expr_to_kotlin(&heading.content);
                 let size = match heading.level {
-                    1 => "28", 2 => "24", 3 => "20", _ => "18",
+                    1 => "28",
+                    2 => "24",
+                    3 => "20",
+                    _ => "18",
                 };
                 self.line(&format!(
                     "Text(text = {}, fontSize = {}.sp, fontWeight = FontWeight.Bold)",
@@ -246,7 +299,10 @@ impl<'a> ComposeCodegen<'a> {
             }
             HIRView::Icon(icon) => {
                 let name = self.expr_to_kotlin(&icon.name);
-                self.line(&format!("Icon(imageVector = Icons.Default.Star, contentDescription = {})", name));
+                self.line(&format!(
+                    "Icon(imageVector = Icons.Default.Star, contentDescription = {})",
+                    name
+                ));
             }
             HIRView::Badge(badge) => {
                 let content = self.expr_to_kotlin(&badge.content);
@@ -262,7 +318,10 @@ impl<'a> ComposeCodegen<'a> {
                     ButtonStyle::Icon => {
                         self.line(&format!("IconButton(onClick = {{ {} }}) {{", action));
                         self.indent += 1;
-                        self.line(&format!("Icon(imageVector = Icons.Default.Star, contentDescription = {})", label));
+                        self.line(&format!(
+                            "Icon(imageVector = Icons.Default.Star, contentDescription = {})",
+                            label
+                        ));
                         self.indent -= 1;
                         self.line("}");
                     }
@@ -337,7 +396,9 @@ impl<'a> ComposeCodegen<'a> {
                 self.line("}");
             }
             HIRView::ComponentRef(comp_ref) => {
-                let args: Vec<String> = comp_ref.args.iter()
+                let args: Vec<String> = comp_ref
+                    .args
+                    .iter()
                     .filter(|(k, _)| k != "_")
                     .map(|(k, v)| format!("{} = {}", k, self.expr_to_kotlin(v)))
                     .collect();
@@ -348,7 +409,9 @@ impl<'a> ComposeCodegen<'a> {
                 }
             }
             HIRView::Group(children) => {
-                for child in children { self.emit_view(child); }
+                for child in children {
+                    self.emit_view(child);
+                }
             }
             _ => {
                 self.line("// unsupported element");
@@ -357,13 +420,22 @@ impl<'a> ComposeCodegen<'a> {
     }
 
     fn emit_function(&mut self, func: &HIRFunction) {
-        let params: Vec<String> = func.params.iter().map(|p| {
-            format!("{}: {}", p.name, self.type_to_kotlin(&p.param_type))
-        }).collect();
+        let params: Vec<String> = func
+            .params
+            .iter()
+            .map(|p| format!("{}: {}", p.name, self.type_to_kotlin(&p.param_type)))
+            .collect();
         let ret = self.type_to_kotlin(&func.return_type);
-        self.line(&format!("fun {}({}): {} {{", func.name, params.join(", "), ret));
+        self.line(&format!(
+            "fun {}({}): {} {{",
+            func.name,
+            params.join(", "),
+            ret
+        ));
         self.indent += 1;
-        for stmt in &func.body { self.emit_stmt(stmt); }
+        for stmt in &func.body {
+            self.emit_stmt(stmt);
+        }
         self.indent -= 1;
         self.line("}");
     }
@@ -379,12 +451,16 @@ impl<'a> ComposeCodegen<'a> {
             HIRStmt::If(cond, then_body, else_body) => {
                 self.line(&format!("if ({}) {{", self.expr_to_kotlin(cond)));
                 self.indent += 1;
-                for s in then_body { self.emit_stmt(s); }
+                for s in then_body {
+                    self.emit_stmt(s);
+                }
                 self.indent -= 1;
                 if let Some(else_stmts) = else_body {
                     self.line("} else {");
                     self.indent += 1;
-                    for s in else_stmts { self.emit_stmt(s); }
+                    for s in else_stmts {
+                        self.emit_stmt(s);
+                    }
                     self.indent -= 1;
                 }
                 self.line("}");
@@ -406,7 +482,9 @@ impl<'a> ComposeCodegen<'a> {
             HIRExpr::BoolLit(b) => b.to_string(),
             HIRExpr::Nil => "null".to_string(),
             HIRExpr::Var(name, _) => name.clone(),
-            HIRExpr::MemberAccess(obj, member, _) => format!("{}.{}", self.expr_to_kotlin(obj), member),
+            HIRExpr::MemberAccess(obj, member, _) => {
+                format!("{}.{}", self.expr_to_kotlin(obj), member)
+            }
             HIRExpr::Call(func, args, _) => {
                 let f = self.expr_to_kotlin(func);
                 let a: Vec<String> = args.iter().map(|a| self.expr_to_kotlin(a)).collect();
@@ -439,7 +517,8 @@ impl<'a> ComposeCodegen<'a> {
                 }
             }
             HIRExpr::Constructor(name, args, _) => {
-                let fields: Vec<String> = args.iter()
+                let fields: Vec<String> = args
+                    .iter()
                     .filter(|(k, _)| k != "_")
                     .map(|(k, v)| format!("{} = {}", k, self.expr_to_kotlin(v)))
                     .collect();
@@ -457,15 +536,21 @@ impl<'a> ComposeCodegen<'a> {
         match action {
             HIRActionExpr::Call(name, args) => {
                 let a: Vec<String> = args.iter().map(|a| self.expr_to_kotlin(a)).collect();
-                if a.is_empty() { format!("{}()", name) }
-                else { format!("{}({})", name, a.join(", ")) }
+                if a.is_empty() {
+                    format!("{}()", name)
+                } else {
+                    format!("{}({})", name, a.join(", "))
+                }
             }
             HIRActionExpr::Navigate(nav) => match nav {
                 HIRNavigate::Back => "onBackPressed()".to_string(),
                 _ => "/* navigate */".to_string(),
             },
-            HIRActionExpr::Sequence(actions) => actions.iter()
-                .map(|a| self.action_expr_to_kotlin(a)).collect::<Vec<_>>().join("; "),
+            HIRActionExpr::Sequence(actions) => actions
+                .iter()
+                .map(|a| self.action_expr_to_kotlin(a))
+                .collect::<Vec<_>>()
+                .join("; "),
         }
     }
 
@@ -483,7 +568,11 @@ impl<'a> ComposeCodegen<'a> {
             },
             AuraType::List(inner) => format!("List<{}>", self.type_to_kotlin(inner)),
             AuraType::Set(inner) => format!("Set<{}>", self.type_to_kotlin(inner)),
-            AuraType::Map(k, v) => format!("Map<{}, {}>", self.type_to_kotlin(k), self.type_to_kotlin(v)),
+            AuraType::Map(k, v) => format!(
+                "Map<{}, {}>",
+                self.type_to_kotlin(k),
+                self.type_to_kotlin(v)
+            ),
             AuraType::Optional(inner) => format!("{}?", self.type_to_kotlin(inner)),
             AuraType::Named(name) => name.clone(),
             AuraType::Action(_) => "() -> Unit".to_string(),
@@ -506,7 +595,9 @@ impl<'a> ComposeCodegen<'a> {
     }
 
     fn spacing_dp(&self, design: &design::ResolvedDesign) -> String {
-        design.spacing.as_ref()
+        design
+            .spacing
+            .as_ref()
             .and_then(|s| s.gap)
             .map(|g| format!("{}", g))
             .unwrap_or_else(|| "8".to_string())
@@ -518,7 +609,8 @@ impl<'a> ComposeCodegen<'a> {
             if let Some(p) = spacing.padding_top {
                 if spacing.padding_top == spacing.padding_bottom
                     && spacing.padding_left == spacing.padding_right
-                    && spacing.padding_top == spacing.padding_left {
+                    && spacing.padding_top == spacing.padding_left
+                {
                     mods.push(format!("modifier = Modifier.padding({}.dp), ", p));
                 }
             }
@@ -564,14 +656,19 @@ mod tests {
 
     fn compile_source(source: &str) -> ComposeOutput {
         let result = aura_core::parser::parse(source);
-        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Parse errors: {:?}",
+            result.errors
+        );
         let hir = aura_core::hir::build_hir(result.program.as_ref().unwrap());
         compile_to_compose(&hir)
     }
 
     #[test]
     fn test_minimal_compose() {
-        let output = compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
+        let output =
+            compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
         assert!(output.kotlin.contains("package com.aura.hello"));
         assert!(output.kotlin.contains("@Composable"));
         assert!(output.kotlin.contains("fun MainScreen()"));
@@ -581,26 +678,30 @@ mod tests {
 
     #[test]
     fn test_state_generates_remember() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state count: int = 0
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(output.kotlin.contains("mutableStateOf"));
         assert!(output.kotlin.contains("count"));
     }
 
     #[test]
     fn test_model_generates_data_class() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   model Todo
     title: text
     done: bool = false
   screen Main
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(output.kotlin.contains("data class Todo("));
         assert!(output.kotlin.contains("val title: String"));
         assert!(output.kotlin.contains("val done: Boolean = false"));
@@ -608,27 +709,31 @@ app Test
 
     #[test]
     fn test_button_generates_compose_button() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       button \"Save\" .accent -> save()
     action save
-      return");
+      return",
+        );
         assert!(output.kotlin.contains("Button(onClick"));
         assert!(output.kotlin.contains("save()"));
     }
 
     #[test]
     fn test_layout_generates_column_row() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       column gap.md padding.lg
         row gap.sm
           text \"A\"
-          text \"B\"");
+          text \"B\"",
+        );
         assert!(output.kotlin.contains("Column("));
         assert!(output.kotlin.contains("Row("));
         assert!(output.kotlin.contains("Arrangement.spacedBy"));
@@ -636,13 +741,15 @@ app Test
 
     #[test]
     fn test_each_generates_foreach() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state items: list[text] = []
     view
       each items as item
-        text item");
+        text item",
+        );
         assert!(output.kotlin.contains("items.forEach { item ->"));
     }
 }

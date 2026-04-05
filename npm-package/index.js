@@ -12,7 +12,7 @@
  *
  * Or build from source:
  *   cargo build --release
- *   ./target/release/aura build app.aura --target web
+ *   ./target/release/aura build --target web
  */
 
 const path = require('path');

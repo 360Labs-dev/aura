@@ -245,7 +245,10 @@ impl Parser {
                 let span = self.peek_span();
                 self.error(
                     crate::errors::ErrorCode::E0702,
-                    format!("Expected type name (capitalized), found {}", self.peek_desc()),
+                    format!(
+                        "Expected type name (capitalized), found {}",
+                        self.peek_desc()
+                    ),
                     span,
                 );
                 Err(())
@@ -394,10 +397,7 @@ impl Parser {
                 self.expect(&Token::Colon).ok()?;
                 let value = self.parse_expression()?;
                 self.skip_newlines();
-                Some(AppMember::ThemeRef(ThemeRef {
-                    value,
-                    span: start,
-                }))
+                Some(AppMember::ThemeRef(ThemeRef { value, span: start }))
             }
             Token::Model => self.parse_model().map(AppMember::Model),
             Token::Screen => self.parse_screen().map(AppMember::Screen),
@@ -720,16 +720,31 @@ impl Parser {
     fn parse_view_element(&mut self) -> Option<ViewElement> {
         match self.peek()? {
             // Layout
-            Token::Column | Token::Row | Token::Stack | Token::Grid | Token::Scroll
+            Token::Column
+            | Token::Row
+            | Token::Stack
+            | Token::Grid
+            | Token::Scroll
             | Token::Wrap => self.parse_layout().map(ViewElement::Layout),
 
             // Widgets
-            Token::Text | Token::Heading | Token::Image | Token::Icon | Token::Badge
-            | Token::Progress | Token::Avatar => self.parse_widget().map(ViewElement::Widget),
+            Token::Text
+            | Token::Heading
+            | Token::Image
+            | Token::Icon
+            | Token::Badge
+            | Token::Progress
+            | Token::Avatar => self.parse_widget().map(ViewElement::Widget),
 
             // Inputs
-            Token::TextField | Token::TextArea | Token::Checkbox | Token::Toggle
-            | Token::Slider | Token::Picker | Token::DatePicker | Token::Segmented
+            Token::TextField
+            | Token::TextArea
+            | Token::Checkbox
+            | Token::Toggle
+            | Token::Slider
+            | Token::Picker
+            | Token::DatePicker
+            | Token::Segmented
             | Token::Stepper => self.parse_input().map(ViewElement::Input),
 
             // Button
@@ -953,7 +968,9 @@ impl Parser {
             if let Some(Token::Ident(_)) = self.tokens.get(self.pos + 1).map(|t| &t.value) {
                 // Check it's not a design token context (heuristic: design tokens are
                 // known token names like md, lg, accent, bold etc.)
-                let next_name = if let Some(Token::Ident(s)) = self.tokens.get(self.pos + 1).map(|t| &t.value) {
+                let next_name = if let Some(Token::Ident(s)) =
+                    self.tokens.get(self.pos + 1).map(|t| &t.value)
+                {
                     s.clone()
                 } else {
                     break;
@@ -1419,7 +1436,10 @@ impl Parser {
                 self.advance();
                 Some(Pattern::Nil(span))
             }
-            Token::StringLit(_) | Token::Integer(_) | Token::FloatLit(_) | Token::True
+            Token::StringLit(_)
+            | Token::Integer(_)
+            | Token::FloatLit(_)
+            | Token::True
             | Token::False => {
                 let expr = self.parse_expression()?;
                 Some(Pattern::Literal(expr))
@@ -1515,10 +1535,14 @@ impl Parser {
             }
             // Represent union as a named type with " | " joined name
             // The type checker resolves this via AuraType::Union
-            let union_name = types.iter().map(|t| match t {
-                TypeExpr::Named(n, _) => n.clone(),
-                _ => "unknown".to_string(),
-            }).collect::<Vec<_>>().join(" | ");
+            let union_name = types
+                .iter()
+                .map(|t| match t {
+                    TypeExpr::Named(n, _) => n.clone(),
+                    _ => "unknown".to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(" | ");
             return Some(TypeExpr::Named(union_name, span));
         }
 
@@ -1622,9 +1646,18 @@ impl Parser {
                 Some(TypeExpr::Action(params, span))
             }
             // Named types (primitives + user types)
-            Token::Text | Token::Int | Token::Float | Token::Bool | Token::Timestamp
-            | Token::Duration | Token::Percent | Token::Secret | Token::Sanitized
-            | Token::Email | Token::Url | Token::TokenType => {
+            Token::Text
+            | Token::Int
+            | Token::Float
+            | Token::Bool
+            | Token::Timestamp
+            | Token::Duration
+            | Token::Percent
+            | Token::Secret
+            | Token::Sanitized
+            | Token::Email
+            | Token::Url
+            | Token::TokenType => {
                 let name = match self.peek().unwrap() {
                     Token::Text => "text",
                     Token::Int => "int",
@@ -1639,7 +1672,8 @@ impl Parser {
                     Token::Url => "url",
                     Token::TokenType => "token",
                     _ => unreachable!(),
-                }.to_string();
+                }
+                .to_string();
                 self.advance();
                 Some(TypeExpr::Named(name, span))
             }
@@ -1839,7 +1873,9 @@ impl Parser {
                 // valid member names (bold, italic, accent, etc.)
                 // Tokens like `light`, `medium`, `normal` are ambiguous and should
                 // still allow member access (modern.light, priority.medium)
-                if let Some(Token::Ident(next_name)) = self.tokens.get(self.pos + 1).map(|t| &t.value) {
+                if let Some(Token::Ident(next_name)) =
+                    self.tokens.get(self.pos + 1).map(|t| &t.value)
+                {
                     if is_unambiguous_design_token(next_name) {
                         break; // Let the caller handle design tokens
                     }
@@ -1921,9 +1957,15 @@ impl Parser {
                 }
                 self.expect(&Token::RBracket).ok()?;
                 // Represent as a constructor for now
-                Some(Expr::Constructor("list".to_string(),
-                    items.into_iter().enumerate().map(|(i, e)| (format!("{}", i), e)).collect(),
-                    span))
+                Some(Expr::Constructor(
+                    "list".to_string(),
+                    items
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, e)| (format!("{}", i), e))
+                        .collect(),
+                    span,
+                ))
             }
             Token::If => {
                 // Conditional expression: if a then b else c
@@ -2183,7 +2225,10 @@ impl Parser {
 
     fn is_prop_assign_ahead(&self) -> bool {
         matches!(
-            (self.tokens.get(self.pos).map(|t| &t.value), self.tokens.get(self.pos + 1).map(|t| &t.value)),
+            (
+                self.tokens.get(self.pos).map(|t| &t.value),
+                self.tokens.get(self.pos + 1).map(|t| &t.value)
+            ),
             (Some(Token::Ident(_)), Some(Token::Colon))
         )
     }
@@ -2191,7 +2236,10 @@ impl Parser {
     fn is_named_call_ahead(&self) -> bool {
         // Look for pattern: ident : at start of arg list
         matches!(
-            (self.tokens.get(self.pos).map(|t| &t.value), self.tokens.get(self.pos + 1).map(|t| &t.value)),
+            (
+                self.tokens.get(self.pos).map(|t| &t.value),
+                self.tokens.get(self.pos + 1).map(|t| &t.value)
+            ),
             (Some(Token::Ident(_)), Some(Token::Colon))
         )
     }
@@ -2202,9 +2250,16 @@ impl Parser {
 fn is_direction_token(name: &str) -> bool {
     matches!(
         name,
-        "top" | "bottom" | "left" | "right"
-            | "horizontal" | "vertical"
-            | "leading" | "trailing" | "start" | "end"
+        "top"
+            | "bottom"
+            | "left"
+            | "right"
+            | "horizontal"
+            | "vertical"
+            | "leading"
+            | "trailing"
+            | "start"
+            | "end"
     )
 }
 
@@ -2212,9 +2267,21 @@ fn is_direction_token(name: &str) -> bool {
 fn is_compound_token_prefix(name: &str) -> bool {
     matches!(
         name,
-        "gap" | "padding" | "margin" | "size" | "width" | "height"
-            | "radius" | "shadow" | "elevation" | "opacity"
-            | "align" | "justify" | "max" | "min" | "direction"
+        "gap"
+            | "padding"
+            | "margin"
+            | "size"
+            | "width"
+            | "height"
+            | "radius"
+            | "shadow"
+            | "elevation"
+            | "opacity"
+            | "align"
+            | "justify"
+            | "max"
+            | "min"
+            | "direction"
     )
 }
 
@@ -2224,31 +2291,114 @@ fn is_unambiguous_design_token(name: &str) -> bool {
     matches!(
         name,
         // These are clearly design tokens, never field/method names
-        "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl"
-            | "bold" | "semibold" | "medium" | "heavy" | "thin" | "regular" | "black"
-            | "italic" | "mono" | "underline" | "strike"
-            | "uppercase" | "lowercase" | "capitalize"
-            | "primary" | "secondary" | "accent" | "danger" | "warning" | "success"
-            | "info" | "muted" | "surface" | "background"
-            | "rounded" | "smooth" | "pill" | "circle" | "sharp" | "subtle"
-            | "ease" | "spring" | "bounce" | "indeterminate"
-            | "fill" | "fit" | "display" | "translucent" | "disabled" | "loading"
+        "xs" | "sm"
+            | "md"
+            | "lg"
+            | "xl"
+            | "2xl"
+            | "3xl"
+            | "4xl"
+            | "bold"
+            | "semibold"
+            | "medium"
+            | "heavy"
+            | "thin"
+            | "regular"
+            | "black"
+            | "italic"
+            | "mono"
+            | "underline"
+            | "strike"
+            | "uppercase"
+            | "lowercase"
+            | "capitalize"
+            | "primary"
+            | "secondary"
+            | "accent"
+            | "danger"
+            | "warning"
+            | "success"
+            | "info"
+            | "muted"
+            | "surface"
+            | "background"
+            | "rounded"
+            | "smooth"
+            | "pill"
+            | "circle"
+            | "sharp"
+            | "subtle"
+            | "ease"
+            | "spring"
+            | "bounce"
+            | "indeterminate"
+            | "fill"
+            | "fit"
+            | "display"
+            | "translucent"
+            | "disabled"
+            | "loading"
     )
 }
 
 fn is_design_token_name(name: &str) -> bool {
     matches!(
         name,
-        "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "display"
-            | "primary" | "secondary" | "muted" | "accent" | "danger" | "warning"
-            | "success" | "info" | "surface" | "background" | "divider"
-            | "bold" | "medium" | "semibold" | "heavy" | "light" | "thin" | "regular" | "black"
-            | "italic" | "mono" | "underline" | "strike" | "center" | "leading" | "trailing"
-            | "uppercase" | "lowercase" | "capitalize"
-            | "sharp" | "subtle" | "rounded" | "smooth" | "pill" | "circle"
-            | "ease" | "spring" | "bounce" | "instant" | "fast" | "normal" | "slow"
-            | "fill" | "fit" | "indeterminate"
-            | "horizontal" | "vertical"
+        "xs" | "sm"
+            | "md"
+            | "lg"
+            | "xl"
+            | "2xl"
+            | "3xl"
+            | "4xl"
+            | "display"
+            | "primary"
+            | "secondary"
+            | "muted"
+            | "accent"
+            | "danger"
+            | "warning"
+            | "success"
+            | "info"
+            | "surface"
+            | "background"
+            | "divider"
+            | "bold"
+            | "medium"
+            | "semibold"
+            | "heavy"
+            | "light"
+            | "thin"
+            | "regular"
+            | "black"
+            | "italic"
+            | "mono"
+            | "underline"
+            | "strike"
+            | "center"
+            | "leading"
+            | "trailing"
+            | "uppercase"
+            | "lowercase"
+            | "capitalize"
+            | "sharp"
+            | "subtle"
+            | "rounded"
+            | "smooth"
+            | "pill"
+            | "circle"
+            | "ease"
+            | "spring"
+            | "bounce"
+            | "instant"
+            | "fast"
+            | "normal"
+            | "slow"
+            | "fill"
+            | "fit"
+            | "indeterminate"
+            | "horizontal"
+            | "vertical"
     )
 }
 
@@ -2280,11 +2430,13 @@ mod tests {
 
     #[test]
     fn test_parse_model() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   model Todo
     title: text
-    done: bool = false");
+    done: bool = false",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         let program = result.program.unwrap();
         match &program.app.members[0] {
@@ -2300,18 +2452,24 @@ app Test
 
     #[test]
     fn test_parse_screen_with_state() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   screen Main
     state count: int = 0
     view
-      text \"hello\"");
+      text \"hello\"",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         let program = result.program.unwrap();
         match &program.app.members[0] {
             AppMember::Screen(s) => {
                 assert_eq!(s.name, "Main");
-                assert!(s.members.iter().any(|m| matches!(m, ScreenMember::State(_))));
+                assert!(
+                    s.members
+                        .iter()
+                        .any(|m| matches!(m, ScreenMember::State(_)))
+                );
                 assert!(s.members.iter().any(|m| matches!(m, ScreenMember::View(_))));
             }
             _ => panic!("Expected Screen"),
@@ -2320,11 +2478,13 @@ app Test
 
     #[test]
     fn test_parse_component_with_props() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   component Card(title: text, onTap: action)
     view
-      text title");
+      text title",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         let program = result.program.unwrap();
         match &program.app.members[0] {
@@ -2340,99 +2500,120 @@ app Test
 
     #[test]
     fn test_parse_action_block() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   screen Main
     state x: int = 0
     view
       text \"hi\"
     action increment
-      x = x + 1");
+      x = x + 1",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
     }
 
     #[test]
     fn test_parse_fn_with_return_type() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   screen Main
     view
       text \"hi\"
     fn double(x: int) -> int
-      x * 2");
+      x * 2",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
     }
 
     #[test]
     fn test_parse_button_with_action() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   screen Main
     view
-      button \"Save\" .accent -> save()");
+      button \"Save\" .accent -> save()",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
     }
 
     #[test]
     fn test_parse_if_in_view() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   screen Main
     view
       if true
         text \"yes\"
       else
-        text \"no\"");
+        text \"no\"",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
     }
 
     #[test]
     fn test_parse_each_in_view() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   screen Main
     state items: list[text] = []
     view
       each items as item
-        text item");
+        text item",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
     }
 
     #[test]
     fn test_parse_enum_type() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   model Item
-    priority: enum[low, medium, high]");
+    priority: enum[low, medium, high]",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
     }
 
     #[test]
     fn test_parse_import() {
-        let result = parse("\
+        let result = parse(
+            "\
 import Button from \"@aura/ui\"
 
 app Test
   screen Main
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         assert_eq!(result.program.unwrap().imports.len(), 1);
     }
 
     #[test]
     fn test_parse_multiple_screens() {
-        let result = parse("\
+        let result = parse(
+            "\
 app Test
   screen Home
     view
       text \"Home\"
   screen Settings
     view
-      text \"Settings\"");
+      text \"Settings\"",
+        );
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         let program = result.program.unwrap();
-        let screens: Vec<_> = program.app.members.iter().filter(|m| matches!(m, AppMember::Screen(_))).collect();
+        let screens: Vec<_> = program
+            .app
+            .members
+            .iter()
+            .filter(|m| matches!(m, AppMember::Screen(_)))
+            .collect();
         assert_eq!(screens.len(), 2);
     }
 }

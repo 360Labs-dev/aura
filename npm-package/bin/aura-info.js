@@ -12,13 +12,14 @@ console.log(`
     aura sketch "todo app with dark mode"
     aura build sketch.aura --target web
     aura build sketch.aura --target all
+    aura init myapp && cd myapp && aura run
 
   Commands:
-    aura build <file> --target <web|ios|android|all>
+    aura build [path] --target <web|ios|android|all>
     aura run                          Dev server
     aura sketch "<description>"       Generate from English
     aura init <name>                  New project
-    aura fmt <file>                   Format code
+    aura fmt [path]                   Format code
     aura explain <file>               Code to English
     aura diff <a> <b>                 Semantic diff
     aura doctor                       Check environment

@@ -507,15 +507,29 @@ fn run_benchmark(case: &BenchmarkCase) -> BenchmarkResult {
 }
 
 fn print_results_table(cases: &[BenchmarkCase], results: &[BenchmarkResult]) {
-    println!("  ┌────────────────────────────────────────────────────────────────────────────────────┐");
-    println!("  │                           COMPILATION BENCHMARKS                                   │");
-    println!("  ├──────────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────────┤");
-    println!("  │ Benchmark    │ Parse    │ Analyze  │ HIR      │ Codegen  │ Total    │ Errors       │");
-    println!("  │              │          │          │          │ (3 tgts) │          │              │");
-    println!("  ├──────────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────────┤");
+    println!(
+        "  ┌────────────────────────────────────────────────────────────────────────────────────┐"
+    );
+    println!(
+        "  │                           COMPILATION BENCHMARKS                                   │"
+    );
+    println!(
+        "  ├──────────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────────┤"
+    );
+    println!(
+        "  │ Benchmark    │ Parse    │ Analyze  │ HIR      │ Codegen  │ Total    │ Errors       │"
+    );
+    println!(
+        "  │              │          │          │          │ (3 tgts) │          │              │"
+    );
+    println!(
+        "  ├──────────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────────┤"
+    );
 
     for (case, result) in cases.iter().zip(results.iter()) {
-        let codegen_total = result.web_codegen_time_us + result.swift_codegen_time_us + result.compose_codegen_time_us;
+        let codegen_total = result.web_codegen_time_us
+            + result.swift_codegen_time_us
+            + result.compose_codegen_time_us;
         println!(
             "  │ {:<12} │ {:>5} us │ {:>5} us │ {:>5} us │ {:>5} us │ {:>5} us │ {:>2} parse {:>2} sem │",
             case.name,
@@ -528,14 +542,26 @@ fn print_results_table(cases: &[BenchmarkCase], results: &[BenchmarkResult]) {
             result.semantic_errors,
         );
     }
-    println!("  └──────────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────────┘");
+    println!(
+        "  └──────────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────────┘"
+    );
 
     println!();
-    println!("  ┌────────────────────────────────────────────────────────────────────────────────────┐");
-    println!("  │                           OUTPUT SIZE (bytes)                                       │");
-    println!("  ├──────────────┬────────────────────┬──────────────────┬──────────────────────────────┤");
-    println!("  │ Benchmark    │ Web (HTML+CSS+JS)  │ iOS (Swift)      │ Android (Kotlin)             │");
-    println!("  ├──────────────┼────────────────────┼──────────────────┼──────────────────────────────┤");
+    println!(
+        "  ┌────────────────────────────────────────────────────────────────────────────────────┐"
+    );
+    println!(
+        "  │                           OUTPUT SIZE (bytes)                                       │"
+    );
+    println!(
+        "  ├──────────────┬────────────────────┬──────────────────┬──────────────────────────────┤"
+    );
+    println!(
+        "  │ Benchmark    │ Web (HTML+CSS+JS)  │ iOS (Swift)      │ Android (Kotlin)             │"
+    );
+    println!(
+        "  ├──────────────┼────────────────────┼──────────────────┼──────────────────────────────┤"
+    );
 
     for (case, result) in cases.iter().zip(results.iter()) {
         println!(
@@ -546,15 +572,27 @@ fn print_results_table(cases: &[BenchmarkCase], results: &[BenchmarkResult]) {
             result.compose_output_bytes,
         );
     }
-    println!("  └──────────────┴────────────────────┴──────────────────┴──────────────────────────────┘");
+    println!(
+        "  └──────────────┴────────────────────┴──────────────────┴──────────────────────────────┘"
+    );
 }
 
 fn print_token_comparison(cases: &[BenchmarkCase]) {
-    println!("  ┌──────────────────────────────────────────────────────────────────────────────────────┐");
-    println!("  │                    CODE SIZE COMPARISON (lines / tokens)                              │");
-    println!("  ├──────────────┬────────────────┬────────────────┬────────────────┬────────────────────┤");
-    println!("  │ Benchmark    │ Aura           │ TypeScript+RN  │ Swift+SwiftUI  │ Kotlin+Compose     │");
-    println!("  ├──────────────┼────────────────┼────────────────┼────────────────┼────────────────────┤");
+    println!(
+        "  ┌──────────────────────────────────────────────────────────────────────────────────────┐"
+    );
+    println!(
+        "  │                    CODE SIZE COMPARISON (lines / tokens)                              │"
+    );
+    println!(
+        "  ├──────────────┬────────────────┬────────────────┬────────────────┬────────────────────┤"
+    );
+    println!(
+        "  │ Benchmark    │ Aura           │ TypeScript+RN  │ Swift+SwiftUI  │ Kotlin+Compose     │"
+    );
+    println!(
+        "  ├──────────────┼────────────────┼────────────────┼────────────────┼────────────────────┤"
+    );
 
     for case in cases {
         let aura_l = case.aura_source.lines().count();
@@ -571,23 +609,55 @@ fn print_token_comparison(cases: &[BenchmarkCase]) {
             case.name, aura_l, aura_t, ts_l, ts_t, sw_l, sw_t, kt_l, kt_t,
         );
     }
-    println!("  ├──────────────┼────────────────┼────────────────┼────────────────┼────────────────────┤");
+    println!(
+        "  ├──────────────┼────────────────┼────────────────┼────────────────┼────────────────────┤"
+    );
 
     // Totals
     let aura_total_l: usize = cases.iter().map(|c| c.aura_source.lines().count()).sum();
-    let aura_total_t: usize = cases.iter().map(|c| c.aura_source.split_whitespace().count()).sum();
-    let ts_total_l: usize = cases.iter().map(|c| c.typescript_equivalent.lines().count()).sum();
-    let ts_total_t: usize = cases.iter().map(|c| c.typescript_equivalent.split_whitespace().count()).sum();
-    let sw_total_l: usize = cases.iter().map(|c| c.swift_equivalent.lines().count()).sum();
-    let sw_total_t: usize = cases.iter().map(|c| c.swift_equivalent.split_whitespace().count()).sum();
-    let kt_total_l: usize = cases.iter().map(|c| c.kotlin_equivalent.lines().count()).sum();
-    let kt_total_t: usize = cases.iter().map(|c| c.kotlin_equivalent.split_whitespace().count()).sum();
+    let aura_total_t: usize = cases
+        .iter()
+        .map(|c| c.aura_source.split_whitespace().count())
+        .sum();
+    let ts_total_l: usize = cases
+        .iter()
+        .map(|c| c.typescript_equivalent.lines().count())
+        .sum();
+    let ts_total_t: usize = cases
+        .iter()
+        .map(|c| c.typescript_equivalent.split_whitespace().count())
+        .sum();
+    let sw_total_l: usize = cases
+        .iter()
+        .map(|c| c.swift_equivalent.lines().count())
+        .sum();
+    let sw_total_t: usize = cases
+        .iter()
+        .map(|c| c.swift_equivalent.split_whitespace().count())
+        .sum();
+    let kt_total_l: usize = cases
+        .iter()
+        .map(|c| c.kotlin_equivalent.lines().count())
+        .sum();
+    let kt_total_t: usize = cases
+        .iter()
+        .map(|c| c.kotlin_equivalent.split_whitespace().count())
+        .sum();
 
     println!(
         "  │ TOTAL        │ {:>3}L / {:>4}T  │ {:>3}L / {:>4}T  │ {:>3}L / {:>4}T  │ {:>3}L / {:>4}T      │",
-        aura_total_l, aura_total_t, ts_total_l, ts_total_t, sw_total_l, sw_total_t, kt_total_l, kt_total_t,
+        aura_total_l,
+        aura_total_t,
+        ts_total_l,
+        ts_total_t,
+        sw_total_l,
+        sw_total_t,
+        kt_total_l,
+        kt_total_t,
     );
-    println!("  └──────────────┴────────────────┴────────────────┴────────────────┴────────────────────┘");
+    println!(
+        "  └──────────────┴────────────────┴────────────────┴────────────────┴────────────────────┘"
+    );
 
     let ts_reduction = ((1.0 - (aura_total_t as f64 / ts_total_t as f64)) * 100.0).round();
     let sw_reduction = ((1.0 - (aura_total_t as f64 / sw_total_t as f64)) * 100.0).round();
@@ -610,15 +680,25 @@ fn print_summary(cases: &[BenchmarkCase], results: &[BenchmarkResult]) {
     println!("  │                         SUMMARY                              │");
     println!("  ├──────────────────────────────────────────────────────────────┤");
     println!("  │ Benchmarks run:           {:<33} │", cases.len());
-    println!("  │ First-compile success:    {}/{} ({:.0}%){:<24} │",
-        first_compile_success, cases.len(),
-        (first_compile_success as f64 / cases.len() as f64) * 100.0, "");
+    println!(
+        "  │ First-compile success:    {}/{} ({:.0}%){:<24} │",
+        first_compile_success,
+        cases.len(),
+        (first_compile_success as f64 / cases.len() as f64) * 100.0,
+        ""
+    );
     println!("  │ Total parse time:         {:<30} us │", total_parse);
     println!("  │ Total analysis time:      {:<30} us │", total_analyze);
     println!("  │ Total compile time:       {:<30} us │", total_compile);
-    println!("  │ Avg compile time:         {:<30} us │", total_compile / cases.len() as u128);
+    println!(
+        "  │ Avg compile time:         {:<30} us │",
+        total_compile / cases.len() as u128
+    );
     println!("  │ Total parse errors:       {:<33} │", total_errors);
-    println!("  │ Platforms generated:      3 (Web + iOS + Android){:<9} │", "");
+    println!(
+        "  │ Platforms generated:      3 (Web + iOS + Android){:<9} │",
+        ""
+    );
     println!("  └──────────────────────────────────────────────────────────────┘");
 }
 

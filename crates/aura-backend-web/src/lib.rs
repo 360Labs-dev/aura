@@ -9,4 +9,4 @@
 
 mod codegen;
 
-pub use codegen::{compile_to_web, WebOutput};
+pub use codegen::{WebOutput, compile_to_web};

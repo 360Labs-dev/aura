@@ -71,7 +71,9 @@ pub fn diff(old: &HIRModule, new: &HIRModule) -> Vec<Change> {
     );
 
     if changes.is_empty() {
-        changes.push(Change::Unchanged("No semantic changes detected.".to_string()));
+        changes.push(Change::Unchanged(
+            "No semantic changes detected.".to_string(),
+        ));
     }
 
     changes
@@ -250,7 +252,11 @@ mod tests {
 
     fn build(source: &str) -> HIRModule {
         let result = crate::parser::parse(source);
-        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Parse errors: {:?}",
+            result.errors
+        );
         crate::hir::build_hir(result.program.as_ref().unwrap())
     }
 
@@ -265,7 +271,9 @@ mod tests {
     #[test]
     fn test_added_screen() {
         let a = build("app Test\n  screen Main\n    view\n      text \"Hi\"");
-        let b = build("app Test\n  screen Main\n    view\n      text \"Hi\"\n  screen Settings\n    view\n      text \"Settings\"");
+        let b = build(
+            "app Test\n  screen Main\n    view\n      text \"Hi\"\n  screen Settings\n    view\n      text \"Settings\"",
+        );
         let changes = diff(&a, &b);
         let text = format_diff(&changes);
         assert!(text.contains("+ Screen: Settings"));
@@ -273,7 +281,9 @@ mod tests {
 
     #[test]
     fn test_removed_model() {
-        let a = build("app Test\n  model Todo\n    title: text\n  screen Main\n    view\n      text \"Hi\"");
+        let a = build(
+            "app Test\n  model Todo\n    title: text\n  screen Main\n    view\n      text \"Hi\"",
+        );
         let b = build("app Test\n  screen Main\n    view\n      text \"Hi\"");
         let changes = diff(&a, &b);
         let text = format_diff(&changes);
@@ -282,8 +292,12 @@ mod tests {
 
     #[test]
     fn test_added_field() {
-        let a = build("app Test\n  model Todo\n    title: text\n  screen Main\n    view\n      text \"Hi\"");
-        let b = build("app Test\n  model Todo\n    title: text\n    done: bool\n  screen Main\n    view\n      text \"Hi\"");
+        let a = build(
+            "app Test\n  model Todo\n    title: text\n  screen Main\n    view\n      text \"Hi\"",
+        );
+        let b = build(
+            "app Test\n  model Todo\n    title: text\n    done: bool\n  screen Main\n    view\n      text \"Hi\"",
+        );
         let changes = diff(&a, &b);
         let text = format_diff(&changes);
         assert!(text.contains("field 'done'"));
@@ -291,7 +305,8 @@ mod tests {
 
     #[test]
     fn test_theme_change() {
-        let a = build("app Test\n  theme: modern.light\n  screen Main\n    view\n      text \"Hi\"");
+        let a =
+            build("app Test\n  theme: modern.light\n  screen Main\n    view\n      text \"Hi\"");
         let b = build("app Test\n  theme: modern.dark\n  screen Main\n    view\n      text \"Hi\"");
         let changes = diff(&a, &b);
         let text = format_diff(&changes);

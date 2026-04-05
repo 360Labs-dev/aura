@@ -1,0 +1,5 @@
+app Models
+  model User
+    name: text
+    email: email
+    avatar: optional[url]

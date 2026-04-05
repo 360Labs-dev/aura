@@ -1,0 +1,12 @@
+[app]
+name = "MultiFileTest"
+version = "1.0.0"
+aura-version = "0.1.0"
+
+[targets]
+web = true
+ios = true
+android = true
+
+[theme]
+default = "modern.dark"

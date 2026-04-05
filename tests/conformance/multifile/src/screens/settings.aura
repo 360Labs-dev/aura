@@ -1,0 +1,10 @@
+app Screens
+  screen Settings tab: "gear" label: "Settings"
+    state darkMode: bool = false
+    state notifications: bool = true
+    view
+      column padding.lg gap.md
+        heading "Settings" size.xl .bold
+        toggle darkMode label: "Dark Mode"
+        divider .subtle
+        toggle notifications label: "Notifications"

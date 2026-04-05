@@ -10,7 +10,10 @@ use crate::hir::*;
 /// Produce a human-readable explanation of an HIR module.
 pub fn explain(module: &HIRModule) -> String {
     let mut out = String::new();
-    let mut ex = Explainer { out: &mut out, indent: 0 };
+    let mut ex = Explainer {
+        out: &mut out,
+        indent: 0,
+    };
     ex.explain_module(module);
     out
 }
@@ -78,14 +81,23 @@ impl<'a> Explainer<'a> {
     }
 
     fn explain_model(&mut self, model: &HIRModel) {
-        let field_names: Vec<String> = model.fields.iter().map(|f| {
-            let ty = f.field_type.display_name();
-            if let Some(ref default) = f.default {
-                format!("{} ({}, default: {})", f.name, ty, self.expr_summary(default))
-            } else {
-                format!("{} ({})", f.name, ty)
-            }
-        }).collect();
+        let field_names: Vec<String> = model
+            .fields
+            .iter()
+            .map(|f| {
+                let ty = f.field_type.display_name();
+                if let Some(ref default) = f.default {
+                    format!(
+                        "{} ({}, default: {})",
+                        f.name,
+                        ty,
+                        self.expr_summary(default)
+                    )
+                } else {
+                    format!("{} ({})", f.name, ty)
+                }
+            })
+            .collect();
         self.line(&format!("{}: {}", model.name, field_names.join(", ")));
     }
 
@@ -98,9 +110,11 @@ impl<'a> Explainer<'a> {
         }
 
         if !screen.params.is_empty() {
-            let params: Vec<String> = screen.params.iter().map(|p| {
-                format!("{}: {}", p.name, p.param_type.display_name())
-            }).collect();
+            let params: Vec<String> = screen
+                .params
+                .iter()
+                .map(|p| format!("{}: {}", p.name, p.param_type.display_name()))
+                .collect();
             self.line(&format!("Parameters: {}", params.join(", ")));
         }
 
@@ -108,8 +122,17 @@ impl<'a> Explainer<'a> {
             self.line("State:");
             self.indent += 1;
             for s in &screen.state {
-                let init = s.initial.as_ref().map(|e| format!(" = {}", self.expr_summary(e))).unwrap_or_default();
-                self.line(&format!("{}: {}{}", s.name, s.state_type.display_name(), init));
+                let init = s
+                    .initial
+                    .as_ref()
+                    .map(|e| format!(" = {}", self.expr_summary(e)))
+                    .unwrap_or_default();
+                self.line(&format!(
+                    "{}: {}{}",
+                    s.name,
+                    s.state_type.display_name(),
+                    init
+                ));
             }
             self.indent -= 1;
         }
@@ -132,9 +155,11 @@ impl<'a> Explainer<'a> {
             self.line("Functions:");
             self.indent += 1;
             for func in &screen.functions {
-                let params: Vec<String> = func.params.iter().map(|p| {
-                    format!("{}: {}", p.name, p.param_type.display_name())
-                }).collect();
+                let params: Vec<String> = func
+                    .params
+                    .iter()
+                    .map(|p| format!("{}: {}", p.name, p.param_type.display_name()))
+                    .collect();
                 let ret = func.return_type.display_name();
                 if params.is_empty() {
                     self.line(&format!("{} → {}", func.name, ret));
@@ -149,9 +174,11 @@ impl<'a> Explainer<'a> {
     }
 
     fn explain_component(&mut self, comp: &HIRComponent) {
-        let props: Vec<String> = comp.props.iter().map(|p| {
-            format!("{}: {}", p.name, p.param_type.display_name())
-        }).collect();
+        let props: Vec<String> = comp
+            .props
+            .iter()
+            .map(|p| format!("{}: {}", p.name, p.param_type.display_name()))
+            .collect();
         self.line(&format!("{} ({})", comp.name, props.join(", ")));
         self.indent += 1;
         self.explain_view(&comp.view);
@@ -226,10 +253,16 @@ impl<'a> Explainer<'a> {
             }
             HIRView::Toggle(toggle) => {
                 let label = toggle.label.as_deref().unwrap_or("toggle");
-                self.line(&format!("Toggle \"{}\", bound to {}", label, toggle.binding));
+                self.line(&format!(
+                    "Toggle \"{}\", bound to {}",
+                    label, toggle.binding
+                ));
             }
             HIRView::Slider(slider) => {
-                self.line(&format!("Slider ({}-{}), bound to {}", slider.min, slider.max, slider.binding));
+                self.line(&format!(
+                    "Slider ({}-{}), bound to {}",
+                    slider.min, slider.max, slider.binding
+                ));
             }
             HIRView::Picker(picker) => {
                 self.line(&format!("Picker, bound to {}", picker.binding));
@@ -256,7 +289,11 @@ impl<'a> Explainer<'a> {
                 }
             }
             HIRView::Each(each) => {
-                self.line(&format!("For each {} in {}:", each.item_name, self.expr_summary(&each.iterable)));
+                self.line(&format!(
+                    "For each {} in {}:",
+                    each.item_name,
+                    self.expr_summary(&each.iterable)
+                ));
                 self.indent += 1;
                 self.explain_view(&each.body);
                 self.indent -= 1;
@@ -276,11 +313,17 @@ impl<'a> Explainer<'a> {
                 if comp_ref.args.is_empty() {
                     self.line(&format!("Component: {}", comp_ref.name));
                 } else {
-                    let args: Vec<String> = comp_ref.args.iter()
+                    let args: Vec<String> = comp_ref
+                        .args
+                        .iter()
                         .filter(|(k, _)| k != "_")
                         .map(|(k, v)| format!("{}: {}", k, self.expr_summary(v)))
                         .collect();
-                    self.line(&format!("Component: {}({})", comp_ref.name, args.join(", ")));
+                    self.line(&format!(
+                        "Component: {}({})",
+                        comp_ref.name,
+                        args.join(", ")
+                    ));
                 }
             }
             HIRView::Group(children) => {
@@ -316,12 +359,16 @@ impl<'a> Explainer<'a> {
             HIRStmt::If(cond, then_body, else_body) => {
                 self.line(&format!("If {}:", self.expr_summary(cond)));
                 self.indent += 1;
-                for s in then_body { self.explain_stmt(s); }
+                for s in then_body {
+                    self.explain_stmt(s);
+                }
                 self.indent -= 1;
                 if let Some(else_stmts) = else_body {
                     self.line("Otherwise:");
                     self.indent += 1;
-                    for s in else_stmts { self.explain_stmt(s); }
+                    for s in else_stmts {
+                        self.explain_stmt(s);
+                    }
                     self.indent -= 1;
                 }
             }
@@ -374,14 +421,13 @@ impl<'a> Explainer<'a> {
                 };
                 format!("{} {} {}", l, op_str, r)
             }
-            HIRExpr::UnaryOp(op, operand, _) => {
-                match op {
-                    crate::ast::UnaryOp::Not => format!("not {}", self.expr_summary(operand)),
-                    crate::ast::UnaryOp::Neg => format!("-{}", self.expr_summary(operand)),
-                }
-            }
+            HIRExpr::UnaryOp(op, operand, _) => match op {
+                crate::ast::UnaryOp::Not => format!("not {}", self.expr_summary(operand)),
+                crate::ast::UnaryOp::Neg => format!("-{}", self.expr_summary(operand)),
+            },
             HIRExpr::Constructor(name, args, _) => {
-                let fields: Vec<String> = args.iter()
+                let fields: Vec<String> = args
+                    .iter()
                     .filter(|(k, _)| k != "_")
                     .map(|(k, v)| format!("{}: {}", k, self.expr_summary(v)))
                     .collect();
@@ -417,9 +463,11 @@ impl<'a> Explainer<'a> {
                 HIRNavigate::Replace(expr) => format!("replace with {}", self.expr_summary(expr)),
                 HIRNavigate::Dismiss => "dismiss".to_string(),
             },
-            HIRActionExpr::Sequence(actions) => {
-                actions.iter().map(|a| self.action_expr_summary(a)).collect::<Vec<_>>().join(", then ")
-            }
+            HIRActionExpr::Sequence(actions) => actions
+                .iter()
+                .map(|a| self.action_expr_summary(a))
+                .collect::<Vec<_>>()
+                .join(", then "),
         }
     }
 }
@@ -430,14 +478,19 @@ mod tests {
 
     fn explain_source(source: &str) -> String {
         let result = crate::parser::parse(source);
-        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Parse errors: {:?}",
+            result.errors
+        );
         let hir = crate::hir::build_hir(result.program.as_ref().unwrap());
         explain(&hir)
     }
 
     #[test]
     fn test_explain_minimal() {
-        let output = explain_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
+        let output =
+            explain_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
         assert!(output.contains("App: Hello"));
         assert!(output.contains("Screen: Main"));
         assert!(output.contains("Hello, Aura!"));
@@ -445,14 +498,16 @@ mod tests {
 
     #[test]
     fn test_explain_model() {
-        let output = explain_source("\
+        let output = explain_source(
+            "\
 app Test
   model Todo
     title: text
     done: bool = false
   screen Main
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(output.contains("Todo"));
         assert!(output.contains("title"));
         assert!(output.contains("done"));
@@ -460,13 +515,15 @@ app Test
 
     #[test]
     fn test_explain_button() {
-        let output = explain_source("\
+        let output = explain_source(
+            "\
 app Test
   screen Main
     view
       button \"Save\" .accent -> save()
     action save
-      return");
+      return",
+        );
         assert!(output.contains("Button"));
         assert!(output.contains("Save"));
         assert!(output.contains("save"));
@@ -474,13 +531,15 @@ app Test
 
     #[test]
     fn test_explain_each() {
-        let output = explain_source("\
+        let output = explain_source(
+            "\
 app Test
   screen Main
     state items: list[text] = []
     view
       each items as item
-        text item");
+        text item",
+        );
         assert!(output.contains("For each item in items"));
     }
 }

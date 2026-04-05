@@ -1,0 +1,5 @@
+app Models
+  model Task
+    title: text
+    done: bool = false
+    priority: enum[low, medium, high] = low

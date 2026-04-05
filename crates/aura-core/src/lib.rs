@@ -9,6 +9,7 @@
 
 pub mod ast;
 pub mod cache;
+pub mod config;
 pub mod declarations;
 pub mod design;
 pub mod diff;

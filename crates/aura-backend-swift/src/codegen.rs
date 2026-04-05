@@ -1,7 +1,7 @@
 //! SwiftUI codegen: HIR → Swift source code
 
-use aura_core::hir::*;
 use aura_core::design;
+use aura_core::hir::*;
 
 pub struct SwiftOutput {
     pub swift: String,
@@ -110,10 +110,7 @@ impl<'a> SwiftCodegen<'a> {
     // === Models ===
 
     fn emit_model(&mut self, model: &HIRModel) {
-        self.line(&format!(
-            "struct {}: Identifiable, Hashable {{",
-            model.name
-        ));
+        self.line(&format!("struct {}: Identifiable, Hashable {{", model.name));
         self.indent += 1;
         self.line("let id = UUID()");
         for field in &model.fields {
@@ -310,14 +307,26 @@ impl<'a> SwiftCodegen<'a> {
                 let content = self.expr_to_swift(&heading.content);
                 self.line(&format!("Text({})", content));
                 self.indent += 1;
-                self.line(&format!(".font(.title{})", if heading.level <= 1 { "" } else if heading.level == 2 { "2" } else { "3" }));
+                self.line(&format!(
+                    ".font(.title{})",
+                    if heading.level <= 1 {
+                        ""
+                    } else if heading.level == 2 {
+                        "2"
+                    } else {
+                        "3"
+                    }
+                ));
                 self.line(".fontWeight(.bold)");
                 self.indent -= 1;
                 self.emit_text_modifiers(&heading.design);
             }
             HIRView::Image(image) => {
                 let src = self.expr_to_swift(&image.source);
-                self.line(&format!("AsyncImage(url: URL(string: {})) {{ image in", src));
+                self.line(&format!(
+                    "AsyncImage(url: URL(string: {})) {{ image in",
+                    src
+                ));
                 self.indent += 1;
                 self.line("image.resizable().aspectRatio(contentMode: .fill)");
                 self.indent -= 1;
@@ -381,10 +390,7 @@ impl<'a> SwiftCodegen<'a> {
             }
             HIRView::Toggle(toggle) => {
                 let label = toggle.label.as_deref().unwrap_or("");
-                self.line(&format!(
-                    "Toggle(\"{}\", isOn: ${})",
-                    label, toggle.binding
-                ));
+                self.line(&format!("Toggle(\"{}\", isOn: ${})", label, toggle.binding));
             }
             HIRView::Slider(slider) => {
                 self.line(&format!(
@@ -513,11 +519,7 @@ impl<'a> SwiftCodegen<'a> {
             .iter()
             .map(|p| format!("{}: {}", p.name, self.type_to_swift(&p.param_type)))
             .collect();
-        self.line(&format!(
-            "func {}({}) {{",
-            action.name,
-            params.join(", ")
-        ));
+        self.line(&format!("func {}({}) {{", action.name, params.join(", ")));
         self.indent += 1;
         for stmt in &action.body {
             self.emit_stmt(stmt);
@@ -605,12 +607,8 @@ impl<'a> SwiftCodegen<'a> {
         if let Some(ref shape) = design.shape {
             match shape.kind {
                 design::ShapeKind::Circle => self.line(".clipShape(Circle())"),
-                design::ShapeKind::Pill => {
-                    self.line(&format!(".clipShape(Capsule())"))
-                }
-                _ if shape.radius > 0.0 => {
-                    self.line(&format!(".cornerRadius({})", shape.radius))
-                }
+                design::ShapeKind::Pill => self.line(&format!(".clipShape(Capsule())")),
+                _ if shape.radius > 0.0 => self.line(&format!(".cornerRadius({})", shape.radius)),
                 _ => {}
             }
         }
@@ -867,14 +865,19 @@ mod tests {
 
     fn compile_source(source: &str) -> SwiftOutput {
         let result = aura_core::parser::parse(source);
-        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Parse errors: {:?}",
+            result.errors
+        );
         let hir = aura_core::hir::build_hir(result.program.as_ref().unwrap());
         compile_to_swift(&hir)
     }
 
     #[test]
     fn test_minimal_swift() {
-        let output = compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
+        let output =
+            compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
         assert!(output.swift.contains("import SwiftUI"));
         assert!(output.swift.contains("struct MainView: View"));
         assert!(output.swift.contains("Text(\"Hello, Aura!\")"));
@@ -883,25 +886,29 @@ mod tests {
 
     #[test]
     fn test_state_generates_at_state() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state count: int = 0
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(output.swift.contains("@State private var count: Int = 0"));
     }
 
     #[test]
     fn test_model_generates_struct() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   model Todo
     title: text
     done: bool = false
   screen Main
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert!(output.swift.contains("struct Todo: Identifiable, Hashable"));
         assert!(output.swift.contains("var title: String"));
         assert!(output.swift.contains("var done: Bool = false"));
@@ -909,27 +916,31 @@ app Test
 
     #[test]
     fn test_button_generates_swift_button() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       button \"Save\" .accent -> save()
     action save
-      return");
+      return",
+        );
         assert!(output.swift.contains("Button(\"Save\""));
         assert!(output.swift.contains("save()"));
     }
 
     #[test]
     fn test_layout_generates_stacks() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       column gap.md padding.lg
         row gap.sm
           text \"A\"
-          text \"B\"");
+          text \"B\"",
+        );
         assert!(output.swift.contains("VStack(spacing: 8)"));
         assert!(output.swift.contains("HStack(spacing: 4)"));
         assert!(output.swift.contains(".padding(16)"));
@@ -937,7 +948,8 @@ app Test
 
     #[test]
     fn test_navigation_tabs() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   navigation: tabs
   screen Home tab: \"house\" label: \"Home\"
@@ -945,7 +957,8 @@ app Test
       text \"Home\"
   screen Settings tab: \"gear\" label: \"Settings\"
     view
-      text \"Settings\"");
+      text \"Settings\"",
+        );
         assert!(output.swift.contains("TabView"));
         assert!(output.swift.contains(".tabItem"));
         assert!(output.swift.contains("house"));
@@ -953,13 +966,15 @@ app Test
 
     #[test]
     fn test_each_generates_foreach() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state items: list[text] = []
     view
       each items as item
-        text item");
+        text item",
+        );
         assert!(output.swift.contains("ForEach(items"));
     }
 }

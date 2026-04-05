@@ -9,7 +9,11 @@
 pub fn sketch(description: &str) -> String {
     let desc = description.to_lowercase();
     let app_name = extract_app_name(&desc);
-    let theme = if desc.contains("dark") { "modern.dark" } else { "modern.light" };
+    let theme = if desc.contains("dark") {
+        "modern.dark"
+    } else {
+        "modern.light"
+    };
 
     // Match against known app patterns
     if desc.contains("todo") || desc.contains("task") || desc.contains("checklist") {
@@ -116,7 +120,8 @@ fn gen_todo_app(name: &str, theme: &str, desc: &str) -> String {
 }
 
 fn gen_counter_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -139,11 +144,14 @@ fn gen_counter_app(name: &str, theme: &str) -> String {
 
     action reset
       count = 0
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_chat_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   model Message
@@ -170,11 +178,14 @@ fn gen_chat_app(name: &str, theme: &str) -> String {
     action sendMessage
       messages = messages.append(Message(text: input))
       input = ""
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_weather_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -203,11 +214,14 @@ fn gen_weather_app(name: &str, theme: &str) -> String {
             text "Wed" .muted
             icon "sun.max" .warning
             text "75"
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_notes_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   model Note
@@ -232,11 +246,14 @@ fn gen_notes_app(name: &str, theme: &str) -> String {
 
     action addNote
       notes = notes.append(Note(title: "New Note", content: ""))
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_profile_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -261,11 +278,14 @@ fn gen_profile_app(name: &str, theme: &str) -> String {
 
     action editProfile
       return
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_timer_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -292,11 +312,14 @@ fn gen_timer_app(name: &str, theme: &str) -> String {
     action reset
       seconds = 0
       running = false
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_settings_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -325,11 +348,14 @@ fn gen_settings_app(name: &str, theme: &str) -> String {
 
     action signOut
       return
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_gallery_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -352,11 +378,14 @@ fn gen_gallery_app(name: &str, theme: &str) -> String {
 
     action addPhoto
       photos = photos.append("photo.jpg")
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_login_app(name: &str, theme: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -385,11 +414,14 @@ fn gen_login_app(name: &str, theme: &str) -> String {
 
     action signUp
       return
-"#, name, theme)
+"#,
+        name, theme
+    )
 }
 
 fn gen_default_app(name: &str, theme: &str, description: &str) -> String {
-    format!(r#"app {}
+    format!(
+        r#"app {}
   theme: {}
 
   screen Main
@@ -397,7 +429,9 @@ fn gen_default_app(name: &str, theme: &str, description: &str) -> String {
       column gap.lg padding.2xl align.center
         heading "{}" size.xl .bold
         text "{}" .secondary .center
-"#, name, theme, name, description)
+"#,
+        name, theme, name, description
+    )
 }
 
 #[cfg(test)]
@@ -445,8 +479,16 @@ mod tests {
     fn test_sketch_generates_parseable_code() {
         // Every sketch template should produce parseable Aura code
         let descriptions = [
-            "todo app", "counter", "chat app", "weather", "notes app",
-            "profile page", "timer", "settings", "photo gallery", "login screen",
+            "todo app",
+            "counter",
+            "chat app",
+            "weather",
+            "notes app",
+            "profile page",
+            "timer",
+            "settings",
+            "photo gallery",
+            "login screen",
             "something random",
         ];
         for desc in descriptions {
@@ -455,7 +497,8 @@ mod tests {
             assert!(
                 result.program.is_some(),
                 "sketch(\"{}\") produced unparseable code:\n{}\nErrors: {:?}",
-                desc, code,
+                desc,
+                code,
                 result.errors.iter().map(|e| &e.message).collect::<Vec<_>>()
             );
         }

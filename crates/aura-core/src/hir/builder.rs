@@ -4,7 +4,9 @@
 //! that codegen backends consume.
 
 use crate::ast;
-use crate::design::{self, ResolvedDesign, ResolvedSpacing, ResolvedTypography, ResolvedColor, ResolvedShape};
+use crate::design::{
+    self, ResolvedColor, ResolvedDesign, ResolvedShape, ResolvedSpacing, ResolvedTypography,
+};
 use crate::hir::nodes::*;
 use crate::types::AuraType;
 
@@ -118,11 +120,7 @@ impl HIRBuilder {
         let mut functions = Vec::new();
         let tab = self.build_screen_tab(&screen.modifiers);
 
-        let params: Vec<HIRParam> = screen
-            .params
-            .iter()
-            .map(|p| self.build_param(p))
-            .collect();
+        let params: Vec<HIRParam> = screen.params.iter().map(|p| self.build_param(p)).collect();
 
         for member in &screen.members {
             match member {
@@ -303,7 +301,10 @@ impl HIRBuilder {
             ast::InputKind::TextField => HIRView::TextField(HIRTextField {
                 binding: input.binding.clone(),
                 placeholder,
-                action: input.action.as_ref().map(|a| Box::new(self.build_action_expr(a))),
+                action: input
+                    .action
+                    .as_ref()
+                    .map(|a| Box::new(self.build_action_expr(a))),
                 design,
             }),
             ast::InputKind::TextArea => HIRView::TextArea(HIRTextArea {
@@ -317,7 +318,11 @@ impl HIRBuilder {
             }),
             ast::InputKind::Toggle => HIRView::Toggle(HIRToggle {
                 binding: input.binding.clone(),
-                label: input.props.iter().find(|p| p.name == "label").and_then(|p| self.expr_to_string_opt(&p.value)),
+                label: input
+                    .props
+                    .iter()
+                    .find(|p| p.name == "label")
+                    .and_then(|p| self.expr_to_string_opt(&p.value)),
                 design,
             }),
             ast::InputKind::Slider => HIRView::Slider(HIRSlider {
@@ -329,19 +334,29 @@ impl HIRBuilder {
             }),
             ast::InputKind::Picker => HIRView::Picker(HIRPicker {
                 binding: input.binding.clone(),
-                options: input.props.iter().find(|p| p.name == "options")
+                options: input
+                    .props
+                    .iter()
+                    .find(|p| p.name == "options")
                     .map(|p| self.build_expr(&p.value))
                     .unwrap_or(HIRExpr::StringLit(String::new())),
                 design,
             }),
             ast::InputKind::DatePicker => HIRView::DatePicker(HIRDatePicker {
                 binding: input.binding.clone(),
-                label: input.props.iter().find(|p| p.name == "label").and_then(|p| self.expr_to_string_opt(&p.value)),
+                label: input
+                    .props
+                    .iter()
+                    .find(|p| p.name == "label")
+                    .and_then(|p| self.expr_to_string_opt(&p.value)),
                 design,
             }),
             ast::InputKind::Segmented => HIRView::Segmented(HIRSegmented {
                 binding: input.binding.clone(),
-                options: input.props.iter().find(|p| p.name == "options")
+                options: input
+                    .props
+                    .iter()
+                    .find(|p| p.name == "options")
                     .map(|p| self.build_expr(&p.value))
                     .unwrap_or(HIRExpr::StringLit(String::new())),
                 design,
@@ -380,7 +395,13 @@ impl HIRBuilder {
             then_view: Box::new(if if_view.then_body.len() == 1 {
                 self.build_view_element(&if_view.then_body[0])
             } else {
-                HIRView::Group(if_view.then_body.iter().map(|e| self.build_view_element(e)).collect())
+                HIRView::Group(
+                    if_view
+                        .then_body
+                        .iter()
+                        .map(|e| self.build_view_element(e))
+                        .collect(),
+                )
             }),
             else_view: if_view.else_body.as_ref().map(|body| {
                 Box::new(if body.len() == 1 {
@@ -396,7 +417,12 @@ impl HIRBuilder {
         let body = if each.body.len() == 1 {
             self.build_view_element(&each.body[0])
         } else {
-            HIRView::Group(each.body.iter().map(|e| self.build_view_element(e)).collect())
+            HIRView::Group(
+                each.body
+                    .iter()
+                    .map(|e| self.build_view_element(e))
+                    .collect(),
+            )
         };
 
         HIRView::Each(HIREach {
@@ -497,7 +523,9 @@ impl HIRBuilder {
             ast::Stmt::If(cond, then_body, else_body, _) => HIRStmt::If(
                 self.build_expr(cond),
                 then_body.iter().map(|s| self.build_stmt(s)).collect(),
-                else_body.as_ref().map(|b| b.iter().map(|s| self.build_stmt(s)).collect()),
+                else_body
+                    .as_ref()
+                    .map(|b| b.iter().map(|s| self.build_stmt(s)).collect()),
             ),
             ast::Stmt::When(expr, branches, _) => HIRStmt::When(
                 self.build_expr(expr),
@@ -505,9 +533,9 @@ impl HIRBuilder {
                     .iter()
                     .map(|b| {
                         let body = match &b.body {
-                            ast::StmtOrExpr::Stmt(stmts) => {
-                                HIRStmtOrExpr::Stmts(stmts.iter().map(|s| self.build_stmt(s)).collect())
-                            }
+                            ast::StmtOrExpr::Stmt(stmts) => HIRStmtOrExpr::Stmts(
+                                stmts.iter().map(|s| self.build_stmt(s)).collect(),
+                            ),
                             ast::StmtOrExpr::Expr(e) => HIRStmtOrExpr::Expr(self.build_expr(e)),
                         };
                         (self.build_pattern(&b.pattern), body)
@@ -515,9 +543,10 @@ impl HIRBuilder {
                     .collect(),
             ),
             ast::Stmt::Navigate(nav) => HIRStmt::Navigate(self.build_navigate(nav)),
-            ast::Stmt::Emit(name, args, _) => {
-                HIRStmt::Emit(name.clone(), args.iter().map(|a| self.build_expr(a)).collect())
-            }
+            ast::Stmt::Emit(name, args, _) => HIRStmt::Emit(
+                name.clone(),
+                args.iter().map(|a| self.build_expr(a)).collect(),
+            ),
             ast::Stmt::Return(value, _) => {
                 HIRStmt::Return(value.as_ref().map(|e| self.build_expr(e)))
             }
@@ -536,9 +565,11 @@ impl HIRBuilder {
             ast::Expr::BoolLit(b, _) => HIRExpr::BoolLit(*b),
             ast::Expr::Nil(_) => HIRExpr::Nil,
             ast::Expr::Var(name, _) => HIRExpr::Var(name.clone(), AuraType::Poison),
-            ast::Expr::MemberAccess(obj, member, _) => {
-                HIRExpr::MemberAccess(Box::new(self.build_expr(obj)), member.clone(), AuraType::Poison)
-            }
+            ast::Expr::MemberAccess(obj, member, _) => HIRExpr::MemberAccess(
+                Box::new(self.build_expr(obj)),
+                member.clone(),
+                AuraType::Poison,
+            ),
             ast::Expr::Call(func, args, _) => HIRExpr::Call(
                 Box::new(self.build_expr(func)),
                 args.iter().map(|a| self.build_expr(a)).collect(),
@@ -546,7 +577,9 @@ impl HIRBuilder {
             ),
             ast::Expr::NamedCall(func, args, _) => HIRExpr::NamedCall(
                 Box::new(self.build_expr(func)),
-                args.iter().map(|(k, v)| (k.clone(), self.build_expr(v))).collect(),
+                args.iter()
+                    .map(|(k, v)| (k.clone(), self.build_expr(v)))
+                    .collect(),
                 AuraType::Poison,
             ),
             ast::Expr::Index(obj, idx, _) => HIRExpr::Index(
@@ -570,7 +603,9 @@ impl HIRBuilder {
             ),
             ast::Expr::Constructor(name, args, _) => HIRExpr::Constructor(
                 name.clone(),
-                args.iter().map(|(k, v)| (k.clone(), self.build_expr(v))).collect(),
+                args.iter()
+                    .map(|(k, v)| (k.clone(), self.build_expr(v)))
+                    .collect(),
                 AuraType::Named(name.clone()),
             ),
             ast::Expr::Pipe(left, right, _) => HIRExpr::Pipe(
@@ -597,10 +632,13 @@ impl HIRBuilder {
 
     fn build_action_expr(&self, action: &ast::ActionExpr) -> HIRActionExpr {
         match action {
-            ast::ActionExpr::Call(name, args, _) => {
-                HIRActionExpr::Call(name.clone(), args.iter().map(|a| self.build_expr(a)).collect())
+            ast::ActionExpr::Call(name, args, _) => HIRActionExpr::Call(
+                name.clone(),
+                args.iter().map(|a| self.build_expr(a)).collect(),
+            ),
+            ast::ActionExpr::Navigate(nav) => {
+                HIRActionExpr::Navigate(self.build_navigate_from_ast(nav))
             }
-            ast::ActionExpr::Navigate(nav) => HIRActionExpr::Navigate(self.build_navigate_from_ast(nav)),
             ast::ActionExpr::Lambda(_, body, _) => {
                 // Lambda action — convert body to an action call
                 HIRActionExpr::Call("_lambda".to_string(), vec![self.build_expr(body)])
@@ -636,7 +674,11 @@ impl HIRBuilder {
 
     // === Design token resolution ===
 
-    fn resolve_design(&self, tokens: &[ast::DesignToken], props: &[ast::PropAssign]) -> ResolvedDesign {
+    fn resolve_design(
+        &self,
+        tokens: &[ast::DesignToken],
+        props: &[ast::PropAssign],
+    ) -> ResolvedDesign {
         let mut design = ResolvedDesign::default();
 
         for token in tokens {
@@ -650,10 +692,15 @@ impl HIRBuilder {
                 "gap" => {
                     if let Some(v) = self.expr_to_float(&prop.value) {
                         let spacing = design.spacing.get_or_insert_with(|| ResolvedSpacing {
-                            gap: None, padding_top: None, padding_bottom: None,
-                            padding_left: None, padding_right: None,
-                            margin_top: None, margin_bottom: None,
-                            margin_left: None, margin_right: None,
+                            gap: None,
+                            padding_top: None,
+                            padding_bottom: None,
+                            padding_left: None,
+                            padding_right: None,
+                            margin_top: None,
+                            margin_bottom: None,
+                            margin_left: None,
+                            margin_right: None,
                         });
                         spacing.gap = Some(v);
                     }
@@ -865,8 +912,12 @@ impl HIRBuilder {
             ast::TypeExpr::Collection(kind, args, _) => {
                 let resolved: Vec<_> = args.iter().map(|a| self.resolve_ast_type(a)).collect();
                 match kind.as_str() {
-                    "list" => AuraType::List(Box::new(resolved.into_iter().next().unwrap_or(AuraType::Poison))),
-                    "set" => AuraType::Set(Box::new(resolved.into_iter().next().unwrap_or(AuraType::Poison))),
+                    "list" => AuraType::List(Box::new(
+                        resolved.into_iter().next().unwrap_or(AuraType::Poison),
+                    )),
+                    "set" => AuraType::Set(Box::new(
+                        resolved.into_iter().next().unwrap_or(AuraType::Poison),
+                    )),
                     "map" => {
                         let mut iter = resolved.into_iter();
                         AuraType::Map(
@@ -881,15 +932,29 @@ impl HIRBuilder {
                 AuraType::Optional(Box::new(self.resolve_ast_type(inner)))
             }
             ast::TypeExpr::Enum(variants, _) => AuraType::Enum(
-                variants.iter().map(|v| crate::types::EnumVariant {
-                    name: v.name.clone(),
-                    fields: v.fields.iter().map(|f| (f.name.clone(), self.resolve_ast_type(&f.type_expr))).collect(),
-                }).collect(),
+                variants
+                    .iter()
+                    .map(|v| crate::types::EnumVariant {
+                        name: v.name.clone(),
+                        fields: v
+                            .fields
+                            .iter()
+                            .map(|f| (f.name.clone(), self.resolve_ast_type(&f.type_expr)))
+                            .collect(),
+                    })
+                    .collect(),
             ),
-            ast::TypeExpr::Function(params, ret, _) => AuraType::Function(crate::types::FunctionType { type_params: Vec::new(),
-                params: params.iter().map(|p| self.resolve_ast_type(p)).collect(),
-                return_type: Box::new(ret.as_ref().map(|r| self.resolve_ast_type(r)).unwrap_or(AuraType::Poison)),
-            }),
+            ast::TypeExpr::Function(params, ret, _) => {
+                AuraType::Function(crate::types::FunctionType {
+                    type_params: Vec::new(),
+                    params: params.iter().map(|p| self.resolve_ast_type(p)).collect(),
+                    return_type: Box::new(
+                        ret.as_ref()
+                            .map(|r| self.resolve_ast_type(r))
+                            .unwrap_or(AuraType::Poison),
+                    ),
+                })
+            }
             ast::TypeExpr::Action(params, _) => {
                 AuraType::Action(params.iter().map(|p| self.resolve_ast_type(p)).collect())
             }
@@ -972,7 +1037,11 @@ mod tests {
 
     fn build_from_source(source: &str) -> HIRModule {
         let parse_result = crate::parser::parse(source);
-        assert!(parse_result.errors.is_empty(), "Parse errors: {:?}", parse_result.errors);
+        assert!(
+            parse_result.errors.is_empty(),
+            "Parse errors: {:?}",
+            parse_result.errors
+        );
         build_hir(parse_result.program.as_ref().unwrap())
     }
 
@@ -986,11 +1055,13 @@ mod tests {
 
     #[test]
     fn test_build_model() {
-        let hir = build_from_source("\
+        let hir = build_from_source(
+            "\
 app Test
   model Todo
     title: text
-    done: bool = false");
+    done: bool = false",
+        );
         assert_eq!(hir.models.len(), 1);
         assert_eq!(hir.models[0].name, "Todo");
         assert_eq!(hir.models[0].fields.len(), 2);
@@ -998,12 +1069,14 @@ app Test
 
     #[test]
     fn test_build_design_tokens() {
-        let hir = build_from_source("\
+        let hir = build_from_source(
+            "\
 app Test
   screen Main
     view
       column gap.md padding.lg
-        text \"Hello\" .bold .accent");
+        text \"Hello\" .bold .accent",
+        );
         let view = &hir.screens[0].view;
         // Should be a Column with resolved design
         match view {
@@ -1018,11 +1091,13 @@ app Test
 
     #[test]
     fn test_build_component() {
-        let hir = build_from_source("\
+        let hir = build_from_source(
+            "\
 app Test
   component Card(title: text)
     view
-      text title");
+      text title",
+        );
         assert_eq!(hir.components.len(), 1);
         assert_eq!(hir.components[0].name, "Card");
         assert_eq!(hir.components[0].props.len(), 1);
@@ -1030,26 +1105,30 @@ app Test
 
     #[test]
     fn test_build_action() {
-        let hir = build_from_source("\
+        let hir = build_from_source(
+            "\
 app Test
   screen Main
     state x: int = 0
     view
       text \"hi\"
     action increment
-      x = x + 1");
+      x = x + 1",
+        );
         assert_eq!(hir.screens[0].actions.len(), 1);
         assert_eq!(hir.screens[0].actions[0].name, "increment");
     }
 
     #[test]
     fn test_build_with_theme() {
-        let hir = build_from_source("\
+        let hir = build_from_source(
+            "\
 app Test
   theme: modern.dark
   screen Main
     view
-      text \"hi\"");
+      text \"hi\"",
+        );
         assert_eq!(hir.app.theme, Some("modern.dark".to_string()));
     }
 
@@ -1057,7 +1136,11 @@ app Test
     fn test_size_display_token() {
         let source = "app T\n  screen M\n    view\n      text \"Hello\" size.display .bold";
         let result = crate::parser::parse(source);
-        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Parse errors: {:?}",
+            result.errors
+        );
         let hir = build_hir(result.program.as_ref().unwrap());
         match &hir.screens[0].view {
             HIRView::Text(t) => {

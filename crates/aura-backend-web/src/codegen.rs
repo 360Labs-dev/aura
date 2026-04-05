@@ -1,7 +1,7 @@
 //! Web codegen: HIR → HTML + CSS + JS
 
-use aura_core::hir::*;
 use aura_core::design;
+use aura_core::hir::*;
 
 /// Output of the web backend.
 pub struct WebOutput {
@@ -58,7 +58,8 @@ impl<'a> WebCodegen<'a> {
         let is_dark = self.module.app.theme.as_deref() == Some("modern.dark");
 
         if is_dark {
-            self.css.push_str(r#":root {
+            self.css.push_str(
+                r#":root {
   --spacing-xs: 2px; --spacing-sm: 4px; --spacing-md: 8px; --spacing-lg: 16px;
   --spacing-xl: 24px; --spacing-2xl: 32px; --spacing-3xl: 48px; --spacing-4xl: 64px;
   --font-xs: 0.75rem; --font-sm: 0.875rem; --font-md: 1rem; --font-lg: 1.125rem;
@@ -79,9 +80,11 @@ impl<'a> WebCodegen<'a> {
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
   color-scheme: dark;
 }
-"#);
+"#,
+            );
         } else {
-            self.css.push_str(r#":root {
+            self.css.push_str(
+                r#":root {
   --spacing-xs: 2px; --spacing-sm: 4px; --spacing-md: 8px; --spacing-lg: 16px;
   --spacing-xl: 24px; --spacing-2xl: 32px; --spacing-3xl: 48px; --spacing-4xl: 64px;
   --font-xs: 0.75rem; --font-sm: 0.875rem; --font-md: 1rem; --font-lg: 1.125rem;
@@ -101,7 +104,8 @@ impl<'a> WebCodegen<'a> {
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 }
-"#);
+"#,
+            );
         }
 
         self.css.push_str(r#"
@@ -358,7 +362,8 @@ input[type="range"]::-webkit-slider-thumb {
     // === HTML Generation ===
 
     fn generate_html(&mut self) {
-        self.html.push_str(&format!(r#"<!DOCTYPE html>
+        self.html.push_str(&format!(
+            r#"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -373,7 +378,9 @@ input[type="range"]::-webkit-slider-thumb {
   <script src="app.js"></script>
 </body>
 </html>
-"#, self.module.app.name));
+"#,
+            self.module.app.name
+        ));
     }
 
     fn emit_view(&mut self, view: &HIRView) {
@@ -427,8 +434,16 @@ input[type="range"]::-webkit-slider-thumb {
                 let content = self.expr_to_html(&text.content);
                 self.emit_line(&format!(
                     "<span class=\"aura-text{}\"{}>{}</span>",
-                    if classes.is_empty() { String::new() } else { format!(" {}", classes) },
-                    if style.is_empty() { String::new() } else { format!(" style=\"{}\"", style) },
+                    if classes.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", classes)
+                    },
+                    if style.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" style=\"{}\"", style)
+                    },
                     content,
                 ));
             }
@@ -440,8 +455,16 @@ input[type="range"]::-webkit-slider-thumb {
                 self.emit_line(&format!(
                     "<{} class=\"aura-heading{}\"{}>{}</{}>",
                     tag,
-                    if classes.is_empty() { String::new() } else { format!(" {}", classes) },
-                    if style.is_empty() { String::new() } else { format!(" style=\"{}\"", style) },
+                    if classes.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", classes)
+                    },
+                    if style.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" style=\"{}\"", style)
+                    },
                     content,
                     tag,
                 ));
@@ -452,7 +475,11 @@ input[type="range"]::-webkit-slider-thumb {
                 self.emit_line(&format!(
                     "<img src=\"{}\" alt=\"\"{}/>",
                     src,
-                    if style.is_empty() { String::new() } else { format!(" style=\"{}\"", style) },
+                    if style.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" style=\"{}\"", style)
+                    },
                 ));
             }
             HIRView::Icon(icon) => {
@@ -460,7 +487,11 @@ input[type="range"]::-webkit-slider-thumb {
                 let classes = self.design_classes(&icon.design);
                 self.emit_line(&format!(
                     "<span class=\"aura-icon{}\">{}</span>",
-                    if classes.is_empty() { String::new() } else { format!(" {}", classes) },
+                    if classes.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", classes)
+                    },
                     name,
                 ));
             }
@@ -469,7 +500,11 @@ input[type="range"]::-webkit-slider-thumb {
                 let classes = self.design_classes(&badge.design);
                 self.emit_line(&format!(
                     "<span class=\"aura-badge{}\">{}</span>",
-                    if classes.is_empty() { String::new() } else { format!(" {}", classes) },
+                    if classes.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", classes)
+                    },
                     content,
                 ));
             }
@@ -491,8 +526,16 @@ input[type="range"]::-webkit-slider-thumb {
                 self.emit_line(&format!(
                     "<button class=\"aura-button{}{}\"{}onclick=\"{}\">{}</button>",
                     style_class,
-                    if classes.is_empty() { String::new() } else { format!(" {}", classes) },
-                    if style.is_empty() { String::new() } else { format!(" style=\"{}\" ", style) },
+                    if classes.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", classes)
+                    },
+                    if style.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" style=\"{}\" ", style)
+                    },
                     onclick,
                     label,
                 ));
@@ -535,7 +578,10 @@ input[type="range"]::-webkit-slider-thumb {
                 self.indent -= 1;
                 self.emit_line("</div>");
                 if let Some(ref else_view) = cond.else_view {
-                    self.emit_line(&format!("<div id=\"cond-{}-else\" style=\"display:none\">", id));
+                    self.emit_line(&format!(
+                        "<div id=\"cond-{}-else\" style=\"display:none\">",
+                        id
+                    ));
                     self.indent += 1;
                     self.emit_view(else_view);
                     self.indent -= 1;
@@ -543,15 +589,26 @@ input[type="range"]::-webkit-slider-thumb {
                 }
             }
             HIRView::Each(each) => {
-                self.emit_line(&format!("<!-- each {} as {} -->", self.expr_to_js(&each.iterable), each.item_name));
-                self.emit_line(&format!("<div data-each=\"{}\" data-as=\"{}\">", self.expr_to_js(&each.iterable), each.item_name));
+                self.emit_line(&format!(
+                    "<!-- each {} as {} -->",
+                    self.expr_to_js(&each.iterable),
+                    each.item_name
+                ));
+                self.emit_line(&format!(
+                    "<div data-each=\"{}\" data-as=\"{}\">",
+                    self.expr_to_js(&each.iterable),
+                    each.item_name
+                ));
                 self.indent += 1;
                 self.emit_view(&each.body);
                 self.indent -= 1;
                 self.emit_line("</div>");
             }
             HIRView::Switch(switch) => {
-                self.emit_line(&format!("<!-- when {} -->", self.expr_to_js(&switch.expression)));
+                self.emit_line(&format!(
+                    "<!-- when {} -->",
+                    self.expr_to_js(&switch.expression)
+                ));
                 for case in &switch.cases {
                     self.emit_line(&format!("<div data-case=\"{:?}\">", case.pattern));
                     self.indent += 1;
@@ -563,14 +620,25 @@ input[type="range"]::-webkit-slider-thumb {
             HIRView::ComponentRef(comp_ref) => {
                 self.emit_line(&format!("<!-- component: {} -->", comp_ref.name));
                 // Inline the component's view if we can find it
-                if let Some(comp) = self.module.components.iter().find(|c| c.name == comp_ref.name) {
-                    self.emit_line(&format!("<div class=\"component-{}\">", comp_ref.name.to_lowercase()));
+                if let Some(comp) = self
+                    .module
+                    .components
+                    .iter()
+                    .find(|c| c.name == comp_ref.name)
+                {
+                    self.emit_line(&format!(
+                        "<div class=\"component-{}\">",
+                        comp_ref.name.to_lowercase()
+                    ));
                     self.indent += 1;
                     self.emit_view(&comp.view);
                     self.indent -= 1;
                     self.emit_line("</div>");
                 } else {
-                    self.emit_line(&format!("<div class=\"component-{}\"><!-- not found --></div>", comp_ref.name.to_lowercase()));
+                    self.emit_line(&format!(
+                        "<div class=\"component-{}\"><!-- not found --></div>",
+                        comp_ref.name.to_lowercase()
+                    ));
                 }
             }
             HIRView::Group(children) => {
@@ -587,7 +655,8 @@ input[type="range"]::-webkit-slider-thumb {
     // === JS Generation (Reactive) ===
 
     fn generate_js(&mut self) {
-        self.js.push_str("// Aura App — Generated by Aura Compiler\n");
+        self.js
+            .push_str("// Aura App — Generated by Aura Compiler\n");
         self.js.push_str("'use strict';\n\n");
 
         // Reactive state with Proxy
@@ -616,18 +685,28 @@ input[type="range"]::-webkit-slider-thumb {
         self.js.push_str("function _scheduleRender() {\n");
         self.js.push_str("  if (!_renderPending) {\n");
         self.js.push_str("    _renderPending = true;\n");
-        self.js.push_str("    requestAnimationFrame(() => { _renderPending = false; render(); });\n");
+        self.js
+            .push_str("    requestAnimationFrame(() => { _renderPending = false; render(); });\n");
         self.js.push_str("  }\n");
         self.js.push_str("}\n\n");
 
         // Models
         for model in &self.module.models {
-            self.js.push_str(&format!("function {}(fields) {{\n", model.name));
+            self.js
+                .push_str(&format!("function {}(fields) {{\n", model.name));
             self.js.push_str("  return { ");
-            let field_defaults: Vec<String> = model.fields.iter().map(|f| {
-                let default = f.default.as_ref().map(|e| self.expr_to_js(e)).unwrap_or_else(|| "null".to_string());
-                format!("{}: fields.{} ?? {}", f.name, f.name, default)
-            }).collect();
+            let field_defaults: Vec<String> = model
+                .fields
+                .iter()
+                .map(|f| {
+                    let default = f
+                        .default
+                        .as_ref()
+                        .map(|e| self.expr_to_js(e))
+                        .unwrap_or_else(|| "null".to_string());
+                    format!("{}: fields.{} ?? {}", f.name, f.name, default)
+                })
+                .collect();
             self.js.push_str(&field_defaults.join(", "));
             self.js.push_str(" };\n}\n\n");
         }
@@ -669,7 +748,11 @@ input[type="range"]::-webkit-slider-thumb {
                 for (i, stmt) in func.body.iter().enumerate() {
                     let is_last = i == body_len - 1;
                     let js = self.stmt_to_js(stmt);
-                    if is_last && !js.starts_with("return") && !js.starts_with("if ") && !js.starts_with("state.") {
+                    if is_last
+                        && !js.starts_with("return")
+                        && !js.starts_with("if ")
+                        && !js.starts_with("state.")
+                    {
                         self.js.push_str(&format!("  return {};\n", js));
                     } else {
                         self.js.push_str(&format!("  {};\n", js));
@@ -684,7 +767,8 @@ input[type="range"]::-webkit-slider-thumb {
 
         // Reactive render function — rebuilds DOM from state
         self.js.push_str("function render() {\n");
-        self.js.push_str("  const app = document.getElementById('app');\n");
+        self.js
+            .push_str("  const app = document.getElementById('app');\n");
         self.js.push_str("  if (!app) return;\n");
         self.js.push_str("  app.innerHTML = renderView();\n");
         self.js.push_str("  _bindEvents();\n");
@@ -702,44 +786,63 @@ input[type="range"]::-webkit-slider-thumb {
 
         // Icon name to emoji mapping
         self.js.push_str("const _icons = {");
-        self.js.push_str("'arrow.up':'\u{2B06}\u{FE0F}','arrow.up.circle.fill':'\u{2B06}\u{FE0F}',");
-        self.js.push_str("'trash':'\u{1F5D1}','trash.fill':'\u{1F5D1}',");
-        self.js.push_str("'plus':'+','plus.circle':'+','minus':'\u{2212}',");
-        self.js.push_str("'star':'\u{2B50}','star.fill':'\u{2B50}',");
-        self.js.push_str("'heart':'\u{2764}\u{FE0F}','heart.fill':'\u{2764}\u{FE0F}',");
-        self.js.push_str("'checkmark':'\u{2705}','checkmark.circle':'\u{2705}',");
-        self.js.push_str("'xmark':'\u{274C}','magnifyingglass':'\u{1F50D}',");
-        self.js.push_str("'gear':'\u{2699}\u{FE0F}','person':'\u{1F464}',");
+        self.js
+            .push_str("'arrow.up':'\u{2B06}\u{FE0F}','arrow.up.circle.fill':'\u{2B06}\u{FE0F}',");
+        self.js
+            .push_str("'trash':'\u{1F5D1}','trash.fill':'\u{1F5D1}',");
+        self.js
+            .push_str("'plus':'+','plus.circle':'+','minus':'\u{2212}',");
+        self.js
+            .push_str("'star':'\u{2B50}','star.fill':'\u{2B50}',");
+        self.js
+            .push_str("'heart':'\u{2764}\u{FE0F}','heart.fill':'\u{2764}\u{FE0F}',");
+        self.js
+            .push_str("'checkmark':'\u{2705}','checkmark.circle':'\u{2705}',");
+        self.js
+            .push_str("'xmark':'\u{274C}','magnifyingglass':'\u{1F50D}',");
+        self.js
+            .push_str("'gear':'\u{2699}\u{FE0F}','person':'\u{1F464}',");
         self.js.push_str("'house':'\u{1F3E0}','bell':'\u{1F514}',");
-        self.js.push_str("'camera':'\u{1F4F7}','photo':'\u{1F5BC}\u{FE0F}',");
-        self.js.push_str("'sun.max':'\u{2600}\u{FE0F}','cloud':'\u{2601}\u{FE0F}',");
-        self.js.push_str("'cloud.rain':'\u{1F327}\u{FE0F}','cloud.snow':'\u{1F328}\u{FE0F}',");
+        self.js
+            .push_str("'camera':'\u{1F4F7}','photo':'\u{1F5BC}\u{FE0F}',");
+        self.js
+            .push_str("'sun.max':'\u{2600}\u{FE0F}','cloud':'\u{2601}\u{FE0F}',");
+        self.js
+            .push_str("'cloud.rain':'\u{1F327}\u{FE0F}','cloud.snow':'\u{1F328}\u{FE0F}',");
         self.js.push_str("'drop':'\u{1F4A7}','wind':'\u{1F4A8}',");
-        self.js.push_str("'lock.circle':'\u{1F512}','lock':'\u{1F512}',");
-        self.js.push_str("'phone':'\u{1F4DE}','video':'\u{1F4F9}','mic':'\u{1F3A4}',");
+        self.js
+            .push_str("'lock.circle':'\u{1F512}','lock':'\u{1F512}',");
+        self.js
+            .push_str("'phone':'\u{1F4DE}','video':'\u{1F4F9}','mic':'\u{1F3A4}',");
         self.js.push_str("'cart':'\u{1F6D2}','inbox':'\u{1F4E5}',");
         self.js.push_str("'square.and.pencil':'\u{270F}\u{FE0F}',");
-        self.js.push_str("'bubble.left.and.bubble.right':'\u{1F4AC}',");
+        self.js
+            .push_str("'bubble.left.and.bubble.right':'\u{1F4AC}',");
         self.js.push_str("};\n");
-        self.js.push_str("function _icon(n) { return _icons[n] || n; }\n\n");
+        self.js
+            .push_str("function _icon(n) { return _icons[n] || n; }\n\n");
 
         // Event binding after render
         self.js.push_str("function _bindEvents() {\n");
         self.js.push_str("  // Bind input elements to state\n");
-        self.js.push_str("  document.querySelectorAll('[data-bind]').forEach(el => {\n");
+        self.js
+            .push_str("  document.querySelectorAll('[data-bind]').forEach(el => {\n");
         self.js.push_str("    const key = el.dataset.bind;\n");
         self.js.push_str("    if (el.type === 'checkbox') {\n");
         self.js.push_str("      el.checked = !!state[key];\n");
-        self.js.push_str("      el.onchange = () => { state[key] = el.checked; };\n");
+        self.js
+            .push_str("      el.onchange = () => { state[key] = el.checked; };\n");
         self.js.push_str("    } else {\n");
         self.js.push_str("      el.value = state[key] || '';\n");
-        self.js.push_str("      el.oninput = () => { state[key] = el.value; };\n");
+        self.js
+            .push_str("      el.oninput = () => { state[key] = el.value; };\n");
         self.js.push_str("    }\n");
         self.js.push_str("  });\n");
         self.js.push_str("}\n\n");
 
         self.js.push_str("// Initialize on DOM ready\n");
-        self.js.push_str("document.addEventListener('DOMContentLoaded', render);\n");
+        self.js
+            .push_str("document.addEventListener('DOMContentLoaded', render);\n");
     }
 
     /// Generate a JS template literal for a view tree.
@@ -749,35 +852,113 @@ input[type="range"]::-webkit-slider-thumb {
             HIRView::Column(layout) => {
                 let style = self.design_inline_style(&layout.design);
                 let cls = self.design_classes(&layout.design);
-                let children: Vec<String> = layout.children.iter().map(|c| self.view_to_js_template(c, depth + 1)).collect();
-                format!("{}<div class=\"aura-column{}\" style=\"{}\">\n{}{}</div>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, style, children.join(""), pad)
+                let children: Vec<String> = layout
+                    .children
+                    .iter()
+                    .map(|c| self.view_to_js_template(c, depth + 1))
+                    .collect();
+                format!(
+                    "{}<div class=\"aura-column{}\" style=\"{}\">\n{}{}</div>\n",
+                    pad,
+                    if cls.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", cls)
+                    },
+                    style,
+                    children.join(""),
+                    pad
+                )
             }
             HIRView::Row(layout) => {
                 let style = self.design_inline_style(&layout.design);
                 let cls = self.design_classes(&layout.design);
-                let children: Vec<String> = layout.children.iter().map(|c| self.view_to_js_template(c, depth + 1)).collect();
-                format!("{}<div class=\"aura-row{}\" style=\"{}\">\n{}{}</div>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, style, children.join(""), pad)
+                let children: Vec<String> = layout
+                    .children
+                    .iter()
+                    .map(|c| self.view_to_js_template(c, depth + 1))
+                    .collect();
+                format!(
+                    "{}<div class=\"aura-row{}\" style=\"{}\">\n{}{}</div>\n",
+                    pad,
+                    if cls.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", cls)
+                    },
+                    style,
+                    children.join(""),
+                    pad
+                )
             }
             HIRView::Scroll(scroll) => {
-                let children: Vec<String> = scroll.children.iter().map(|c| self.view_to_js_template(c, depth + 1)).collect();
-                format!("{}<div class=\"aura-scroll\">\n{}{}</div>\n", pad, children.join(""), pad)
+                let children: Vec<String> = scroll
+                    .children
+                    .iter()
+                    .map(|c| self.view_to_js_template(c, depth + 1))
+                    .collect();
+                format!(
+                    "{}<div class=\"aura-scroll\">\n{}{}</div>\n",
+                    pad,
+                    children.join(""),
+                    pad
+                )
             }
             HIRView::Grid(grid) => {
-                let children: Vec<String> = grid.children.iter().map(|c| self.view_to_js_template(c, depth + 1)).collect();
-                format!("{}<div class=\"aura-grid\">\n{}{}</div>\n", pad, children.join(""), pad)
+                let children: Vec<String> = grid
+                    .children
+                    .iter()
+                    .map(|c| self.view_to_js_template(c, depth + 1))
+                    .collect();
+                format!(
+                    "{}<div class=\"aura-grid\">\n{}{}</div>\n",
+                    pad,
+                    children.join(""),
+                    pad
+                )
             }
             HIRView::Text(text) => {
                 let content = self.expr_to_js_template(&text.content);
                 let cls = self.design_classes(&text.design);
                 let style = self.design_inline_style(&text.design);
-                format!("{}<span class=\"aura-text{}\"{}>{}</span>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, if style.is_empty() { String::new() } else { format!(" style=\"{}\"", style) }, content)
+                format!(
+                    "{}<span class=\"aura-text{}\"{}>{}</span>\n",
+                    pad,
+                    if cls.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", cls)
+                    },
+                    if style.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" style=\"{}\"", style)
+                    },
+                    content
+                )
             }
             HIRView::Heading(heading) => {
                 let content = self.expr_to_js_template(&heading.content);
                 let cls = self.design_classes(&heading.design);
                 let style = self.design_inline_style(&heading.design);
                 let tag = format!("h{}", heading.level.min(6).max(1));
-                format!("{}<{} class=\"aura-heading{}\"{}>{}</{}>\n", pad, tag, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, if style.is_empty() { String::new() } else { format!(" style=\"{}\"", style) }, content, tag)
+                format!(
+                    "{}<{} class=\"aura-heading{}\"{}>{}</{}>\n",
+                    pad,
+                    tag,
+                    if cls.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", cls)
+                    },
+                    if style.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" style=\"{}\"", style)
+                    },
+                    content,
+                    tag
+                )
             }
             HIRView::Button(button) => {
                 let raw_label = self.expr_to_js_template(&button.label);
@@ -795,12 +976,34 @@ input[type="range"]::-webkit-slider-thumb {
                 } else {
                     raw_label
                 };
-                format!("{}<button class=\"aura-button{}{}\" onclick=\"{}\">{}</button>\n", pad, style_class, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, onclick, label)
+                format!(
+                    "{}<button class=\"aura-button{}{}\" onclick=\"{}\">{}</button>\n",
+                    pad,
+                    style_class,
+                    if cls.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", cls)
+                    },
+                    onclick,
+                    label
+                )
             }
             HIRView::TextField(field) => {
                 let ph = field.placeholder.as_deref().unwrap_or("");
                 let cls = self.design_classes(&field.design);
-                format!("{}<input class=\"aura-input{}\" type=\"text\" placeholder=\"{}\" data-bind=\"{}\" value=\"${{state.{} || ''}}\"/>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, ph, field.binding, field.binding)
+                format!(
+                    "{}<input class=\"aura-input{}\" type=\"text\" placeholder=\"{}\" data-bind=\"{}\" value=\"${{state.{} || ''}}\"/>\n",
+                    pad,
+                    if cls.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", cls)
+                    },
+                    ph,
+                    field.binding,
+                    field.binding
+                )
             }
             HIRView::Checkbox(cb) => {
                 let binding_root = cb.binding.split('.').next().unwrap_or(&cb.binding);
@@ -809,19 +1012,37 @@ input[type="range"]::-webkit-slider-thumb {
                 } else {
                     format!("state.{}", cb.binding)
                 };
-                format!("{}<input class=\"aura-checkbox\" type=\"checkbox\" data-bind=\"{}\" ${{({}) ? 'checked' : ''}}/>\n", pad, cb.binding, binding_js)
+                format!(
+                    "{}<input class=\"aura-checkbox\" type=\"checkbox\" data-bind=\"{}\" ${{({}) ? 'checked' : ''}}/>\n",
+                    pad, cb.binding, binding_js
+                )
             }
             HIRView::Toggle(toggle) => {
                 let label = toggle.label.as_deref().unwrap_or("");
-                format!("{}<label class=\"aura-toggle\"><input type=\"checkbox\" data-bind=\"{}\"/> {}</label>\n", pad, toggle.binding, label)
+                format!(
+                    "{}<label class=\"aura-toggle\"><input type=\"checkbox\" data-bind=\"{}\"/> {}</label>\n",
+                    pad, toggle.binding, label
+                )
             }
             HIRView::Spacer => format!("{}<div class=\"aura-spacer\"></div>\n", pad),
             HIRView::Divider(_) => format!("{}<hr class=\"aura-divider\"/>\n", pad),
-            HIRView::Progress(_) => format!("{}<progress class=\"aura-progress\" max=\"100\"></progress>\n", pad),
+            HIRView::Progress(_) => format!(
+                "{}<progress class=\"aura-progress\" max=\"100\"></progress>\n",
+                pad
+            ),
             HIRView::Icon(icon) => {
                 let name = self.expr_to_js_template(&icon.name);
                 let cls = self.design_classes(&icon.design);
-                format!("{}<span class=\"aura-icon{}\">${{_icon('{}')}}</span>\n", pad, if cls.is_empty() { String::new() } else { format!(" {}", cls) }, name)
+                format!(
+                    "{}<span class=\"aura-icon{}\">${{_icon('{}')}}</span>\n",
+                    pad,
+                    if cls.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" {}", cls)
+                    },
+                    name
+                )
             }
             HIRView::Badge(badge) => {
                 let content = self.expr_to_js_template(&badge.content);
@@ -830,8 +1051,17 @@ input[type="range"]::-webkit-slider-thumb {
             HIRView::Conditional(cond) => {
                 let condition = self.expr_to_js(&cond.condition);
                 let then_html = self.view_to_js_template(&cond.then_view, depth);
-                let else_html = cond.else_view.as_ref().map(|v| self.view_to_js_template(v, depth)).unwrap_or_default();
-                format!("${{({}) ? `{}` : `{}`}}", condition, then_html.trim(), else_html.trim())
+                let else_html = cond
+                    .else_view
+                    .as_ref()
+                    .map(|v| self.view_to_js_template(v, depth))
+                    .unwrap_or_default();
+                format!(
+                    "${{({}) ? `{}` : `{}`}}",
+                    condition,
+                    then_html.trim(),
+                    else_html.trim()
+                )
             }
             HIRView::Each(each) => {
                 let iterable = self.expr_to_js(&each.iterable);
@@ -841,18 +1071,30 @@ input[type="range"]::-webkit-slider-thumb {
                 let item_template = self.view_to_js_template(&each.body, depth + 1);
                 self.local_vars.pop(); // _idx
                 self.local_vars.pop(); // item_name
-                format!("${{{}.map(({}, _idx) => `{}`).join('')}}", iterable, each.item_name, item_template.trim().replace('`', "\\`"))
+                format!(
+                    "${{{}.map(({}, _idx) => `{}`).join('')}}",
+                    iterable,
+                    each.item_name,
+                    item_template.trim().replace('`', "\\`")
+                )
             }
             HIRView::ComponentRef(comp_ref) => {
-                if let Some(comp) = self.module.components.iter().find(|c| c.name == comp_ref.name) {
+                if let Some(comp) = self
+                    .module
+                    .components
+                    .iter()
+                    .find(|c| c.name == comp_ref.name)
+                {
                     self.view_to_js_template(&comp.view, depth)
                 } else {
                     format!("{}<!-- {} -->\n", pad, comp_ref.name)
                 }
             }
-            HIRView::Group(children) => {
-                children.iter().map(|c| self.view_to_js_template(c, depth)).collect::<Vec<_>>().join("")
-            }
+            HIRView::Group(children) => children
+                .iter()
+                .map(|c| self.view_to_js_template(c, depth))
+                .collect::<Vec<_>>()
+                .join(""),
             _ => format!("{}<!-- unsupported -->\n", pad),
         }
     }
@@ -869,7 +1111,12 @@ input[type="range"]::-webkit-slider-thumb {
                         if let Some(end) = result[start..].find('}') {
                             let var_name = &result[start + 1..start + end];
                             let replacement = format!("${{state.{}}}", var_name);
-                            result = format!("{}{}{}", &result[..start], replacement, &result[start + end + 1..]);
+                            result = format!(
+                                "{}{}{}",
+                                &result[..start],
+                                replacement,
+                                &result[start + end + 1..]
+                            );
                         } else {
                             break;
                         }
@@ -916,8 +1163,16 @@ input[type="range"]::-webkit-slider-thumb {
             "<{} class=\"{}{}\"{}> ",
             tag,
             class,
-            if extra_classes.is_empty() { String::new() } else { format!(" {}", extra_classes) },
-            if style.is_empty() { String::new() } else { format!(" style=\"{}\"", style) },
+            if extra_classes.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", extra_classes)
+            },
+            if style.is_empty() {
+                String::new()
+            } else {
+                format!(" style=\"{}\"", style)
+            },
         ));
         self.indent += 1;
     }
@@ -936,14 +1191,30 @@ input[type="range"]::-webkit-slider-thumb {
         let mut classes = Vec::new();
 
         if let Some(ref typo) = design.typography {
-            if typo.weight == Some(700) { classes.push("text-bold"); }
-            if typo.weight == Some(500) { classes.push("text-medium"); }
-            if typo.italic { classes.push("text-italic"); }
-            if typo.mono { classes.push("text-mono"); }
-            if typo.strikethrough { classes.push("text-strike"); }
-            if typo.underline { classes.push("text-underline"); }
-            if typo.alignment == Some(design::TextAlignment::Center) { classes.push("text-center"); }
-            if typo.transform == Some(design::TextTransform::Uppercase) { classes.push("text-uppercase"); }
+            if typo.weight == Some(700) {
+                classes.push("text-bold");
+            }
+            if typo.weight == Some(500) {
+                classes.push("text-medium");
+            }
+            if typo.italic {
+                classes.push("text-italic");
+            }
+            if typo.mono {
+                classes.push("text-mono");
+            }
+            if typo.strikethrough {
+                classes.push("text-strike");
+            }
+            if typo.underline {
+                classes.push("text-underline");
+            }
+            if typo.alignment == Some(design::TextAlignment::Center) {
+                classes.push("text-center");
+            }
+            if typo.transform == Some(design::TextTransform::Uppercase) {
+                classes.push("text-uppercase");
+            }
         }
 
         if let Some(ref color) = design.color {
@@ -997,10 +1268,18 @@ input[type="range"]::-webkit-slider-thumb {
                 {
                     styles.push(format!("padding: {}px", pt));
                 } else {
-                    if let Some(v) = spacing.padding_top { styles.push(format!("padding-top: {}px", v)); }
-                    if let Some(v) = spacing.padding_bottom { styles.push(format!("padding-bottom: {}px", v)); }
-                    if let Some(v) = spacing.padding_left { styles.push(format!("padding-left: {}px", v)); }
-                    if let Some(v) = spacing.padding_right { styles.push(format!("padding-right: {}px", v)); }
+                    if let Some(v) = spacing.padding_top {
+                        styles.push(format!("padding-top: {}px", v));
+                    }
+                    if let Some(v) = spacing.padding_bottom {
+                        styles.push(format!("padding-bottom: {}px", v));
+                    }
+                    if let Some(v) = spacing.padding_left {
+                        styles.push(format!("padding-left: {}px", v));
+                    }
+                    if let Some(v) = spacing.padding_right {
+                        styles.push(format!("padding-right: {}px", v));
+                    }
                 }
             }
         }
@@ -1088,9 +1367,16 @@ input[type="range"]::-webkit-slider-thumb {
                         }
                         "remove" => {
                             if args_js.len() == 1 {
-                                return format!("{}.filter(_item => _item !== {})", obj_js, args_js[0]);
+                                return format!(
+                                    "{}.filter(_item => _item !== {})",
+                                    obj_js, args_js[0]
+                                );
                             }
-                            return format!("{}.filter(_item => _item !== {})", obj_js, args_js.join(", "));
+                            return format!(
+                                "{}.filter(_item => _item !== {})",
+                                obj_js,
+                                args_js.join(", ")
+                            );
                         }
                         "where" | "filter" => {
                             return format!("{}.filter({})", obj_js, args_js.join(", "));
@@ -1105,7 +1391,10 @@ input[type="range"]::-webkit-slider-thumb {
                             return format!("{}.includes({})", obj_js, args_js[0]);
                         }
                         "sortBy" => {
-                            return format!("[...{}].sort((a, b) => {}(a) > {}(b) ? 1 : -1)", obj_js, args_js[0], args_js[0]);
+                            return format!(
+                                "[...{}].sort((a, b) => {}(a) > {}(b) ? 1 : -1)",
+                                obj_js, args_js[0], args_js[0]
+                            );
                         }
                         "count" if !args_js.is_empty() => {
                             return format!("{}.filter({}).length", obj_js, args_js[0]);
@@ -1114,11 +1403,19 @@ input[type="range"]::-webkit-slider-thumb {
                             return format!("{}.length", obj_js);
                         }
                         "join" => {
-                            return format!("{}.join({})", obj_js, args_js.get(0).cloned().unwrap_or_else(|| "\"\"".to_string()));
+                            return format!(
+                                "{}.join({})",
+                                obj_js,
+                                args_js
+                                    .get(0)
+                                    .cloned()
+                                    .unwrap_or_else(|| "\"\"".to_string())
+                            );
                         }
                         "with" => {
                             // .with(field: value) → spread + override
-                            let fields: Vec<String> = args.iter().map(|a| self.expr_to_js(a)).collect();
+                            let fields: Vec<String> =
+                                args.iter().map(|a| self.expr_to_js(a)).collect();
                             return format!("{{ ...{}, {} }}", obj_js, fields.join(", "));
                         }
                         "format" => {
@@ -1128,14 +1425,27 @@ input[type="range"]::-webkit-slider-thumb {
                             return format!("{}.split({})", obj_js, args_js[0]);
                         }
                         "replace" => {
-                            return format!("{}.replace({}, {})", obj_js, args_js[0], args_js.get(1).cloned().unwrap_or_else(|| "\"\"".to_string()));
+                            return format!(
+                                "{}.replace({}, {})",
+                                obj_js,
+                                args_js[0],
+                                args_js
+                                    .get(1)
+                                    .cloned()
+                                    .unwrap_or_else(|| "\"\"".to_string())
+                            );
                         }
                         "toFloat" => return format!("parseFloat({})", obj_js),
                         "toInt" => return format!("parseInt({})", obj_js),
                         "round" => return format!("Math.round({})", obj_js),
                         "abs" => return format!("Math.abs({})", obj_js),
                         "clamp" => {
-                            return format!("Math.min(Math.max({}, {}), {})", obj_js, args_js.get(0).cloned().unwrap_or_default(), args_js.get(1).cloned().unwrap_or_default());
+                            return format!(
+                                "Math.min(Math.max({}, {}), {})",
+                                obj_js,
+                                args_js.get(0).cloned().unwrap_or_default(),
+                                args_js.get(1).cloned().unwrap_or_default()
+                            );
                         }
                         "startsWith" => return format!("{}.startsWith({})", obj_js, args_js[0]),
                         "endsWith" => return format!("{}.endsWith({})", obj_js, args_js[0]),
@@ -1286,17 +1596,20 @@ input[type="range"]::-webkit-slider-thumb {
     fn action_to_js(&self, action: &HIRActionExpr) -> String {
         match action {
             HIRActionExpr::Call(name, args) => {
-                let a: Vec<String> = args.iter().map(|a| {
-                    let js = self.expr_to_js(a);
-                    // If arg references a local/loop var, it can't be used in onclick
-                    // strings (global scope). Serialize it instead.
-                    if self.local_vars.iter().any(|lv| js.starts_with(lv.as_str())) {
-                        // Use JSON.stringify so the value is captured at render time
-                        format!("' + JSON.stringify({}) + '", js)
-                    } else {
-                        js
-                    }
-                }).collect();
+                let a: Vec<String> = args
+                    .iter()
+                    .map(|a| {
+                        let js = self.expr_to_js(a);
+                        // If arg references a local/loop var, it can't be used in onclick
+                        // strings (global scope). Serialize it instead.
+                        if self.local_vars.iter().any(|lv| js.starts_with(lv.as_str())) {
+                            // Use JSON.stringify so the value is captured at render time
+                            format!("' + JSON.stringify({}) + '", js)
+                        } else {
+                            js
+                        }
+                    })
+                    .collect();
                 format!("{}({})", name, a.join(", "))
             }
             HIRActionExpr::Navigate(nav) => match nav {
@@ -1304,9 +1617,11 @@ input[type="range"]::-webkit-slider-thumb {
                 HIRNavigate::To(expr) => format!("navigate({})", self.expr_to_js(expr)),
                 _ => "/* navigate */".to_string(),
             },
-            HIRActionExpr::Sequence(actions) => {
-                actions.iter().map(|a| self.action_to_js(a)).collect::<Vec<_>>().join("; ")
-            }
+            HIRActionExpr::Sequence(actions) => actions
+                .iter()
+                .map(|a| self.action_to_js(a))
+                .collect::<Vec<_>>()
+                .join("; "),
         }
     }
 }
@@ -1317,16 +1632,24 @@ mod tests {
 
     fn compile_source(source: &str) -> WebOutput {
         let parse_result = aura_core::parser::parse(source);
-        assert!(parse_result.errors.is_empty(), "Parse errors: {:?}", parse_result.errors);
+        assert!(
+            parse_result.errors.is_empty(),
+            "Parse errors: {:?}",
+            parse_result.errors
+        );
         let hir = aura_core::hir::build_hir(parse_result.program.as_ref().unwrap());
         compile_to_web(&hir)
     }
 
     #[test]
     fn test_minimal_html() {
-        let output = compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
+        let output =
+            compile_source("app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\"");
         assert!(output.html.contains("<!DOCTYPE html>"), "Missing doctype");
-        assert!(output.html.contains("<title>Hello</title>"), "Missing title");
+        assert!(
+            output.html.contains("<title>Hello</title>"),
+            "Missing title"
+        );
         assert!(output.html.contains("id=\"app\""), "Missing app div");
         // Content is now rendered by JS
         assert!(output.js.contains("Hello, Aura!"), "JS missing content");
@@ -1344,27 +1667,37 @@ mod tests {
 
     #[test]
     fn test_js_has_reactive_state() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state count: int = 0
     view
-      text \"Hi\"");
+      text \"Hi\"",
+        );
         assert!(output.js.contains("count: 0"), "Missing state init");
         assert!(output.js.contains("Proxy"), "Missing reactive Proxy");
-        assert!(output.js.contains("_scheduleRender"), "Missing render scheduling");
-        assert!(output.js.contains("renderView()"), "Missing renderView call");
+        assert!(
+            output.js.contains("_scheduleRender"),
+            "Missing render scheduling"
+        );
+        assert!(
+            output.js.contains("renderView()"),
+            "Missing renderView call"
+        );
     }
 
     #[test]
     fn test_button_onclick_in_template() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       button \"Click\" .accent -> doStuff()
     action doStuff
-      return");
+      return",
+        );
         assert!(output.js.contains("onclick"), "JS missing onclick");
         assert!(output.js.contains("doStuff"), "JS missing action name");
         assert!(output.js.contains("aura-button"), "JS missing button class");
@@ -1372,12 +1705,14 @@ app Test
 
     #[test]
     fn test_layout_design_tokens_in_template() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     view
       column gap.md padding.lg
-        text \"Hello\" .bold .accent");
+        text \"Hello\" .bold .accent",
+        );
         assert!(output.js.contains("aura-column"), "JS missing column class");
         assert!(output.js.contains("gap: 8px"), "JS missing gap");
         assert!(output.js.contains("padding: 16px"), "JS missing padding");
@@ -1386,40 +1721,61 @@ app Test
 
     #[test]
     fn test_textfield_with_binding() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state query: text = \"\"
     view
-      textfield query placeholder: \"Search...\"");
-        assert!(output.js.contains("data-bind=\"query\""), "JS missing binding");
-        assert!(output.js.contains("placeholder=\"Search...\""), "JS missing placeholder");
-        assert!(output.js.contains("_bindEvents"), "JS missing event binding");
+      textfield query placeholder: \"Search...\"",
+        );
+        assert!(
+            output.js.contains("data-bind=\"query\""),
+            "JS missing binding"
+        );
+        assert!(
+            output.js.contains("placeholder=\"Search...\""),
+            "JS missing placeholder"
+        );
+        assert!(
+            output.js.contains("_bindEvents"),
+            "JS missing event binding"
+        );
     }
 
     #[test]
     fn test_dark_theme() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   theme: modern.dark
   screen Main
     view
-      text \"Dark mode\"");
+      text \"Dark mode\"",
+        );
         assert!(output.css.contains("color-scheme: dark"));
     }
 
     #[test]
     fn test_action_generates_js_function() {
-        let output = compile_source("\
+        let output = compile_source(
+            "\
 app Test
   screen Main
     state count: int = 0
     view
       text \"Hi\"
     action increment
-      count = count + 1");
-        assert!(output.js.contains("function increment()"), "Missing action function");
-        assert!(output.js.contains("state.count = (state.count + 1)"), "Missing assignment");
+      count = count + 1",
+        );
+        assert!(
+            output.js.contains("function increment()"),
+            "Missing action function"
+        );
+        assert!(
+            output.js.contains("state.count = (state.count + 1)"),
+            "Missing assignment"
+        );
         // No explicit render() call needed — Proxy auto-triggers _scheduleRender
     }
 }

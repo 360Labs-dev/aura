@@ -92,10 +92,10 @@ aura.viewElements // { layout: ['column','row',...], widgets: ['text',...], ... 
 ## Commands
 
 ```bash
-aura build app.aura --target web        # → HTML/CSS/JS
-aura build app.aura --target ios        # → SwiftUI
-aura build app.aura --target android    # → Compose
-aura build app.aura --target all        # → all three
+aura build --target web                 # → HTML/CSS/JS
+aura build --target ios                 # → SwiftUI
+aura build --target android             # → Compose
+aura build --target all                 # → all three
 aura sketch "todo app with dark mode"   # → generate from English
 aura run                                # → dev server
 aura explain app.aura                   # → plain English

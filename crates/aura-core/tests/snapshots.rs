@@ -143,8 +143,14 @@ fn snapshot_all_backends_model() {
 
     // All backends should generate the User model
     assert!(web.js.contains("User"), "Web should generate User model");
-    assert!(swift.swift.contains("struct User"), "Swift should generate User struct");
-    assert!(compose.kotlin.contains("data class User"), "Compose should generate User data class");
+    assert!(
+        swift.swift.contains("struct User"),
+        "Swift should generate User struct"
+    );
+    assert!(
+        compose.kotlin.contains("data class User"),
+        "Compose should generate User data class"
+    );
 
     insta::assert_snapshot!("web_model_js", web.js);
     insta::assert_snapshot!("swift_model", swift.swift);

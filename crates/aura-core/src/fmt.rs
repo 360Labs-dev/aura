@@ -13,7 +13,10 @@ use crate::ast::*;
 
 /// Format an Aura program from its AST back into source code.
 pub fn format(program: &Program) -> String {
-    let mut f = Formatter { out: String::new(), indent: 0 };
+    let mut f = Formatter {
+        out: String::new(),
+        indent: 0,
+    };
     f.emit_program(program);
     f.out
 }
@@ -25,7 +28,9 @@ struct Formatter {
 
 impl Formatter {
     fn line(&mut self, text: &str) {
-        for _ in 0..self.indent { self.out.push_str("  "); }
+        for _ in 0..self.indent {
+            self.out.push_str("  ");
+        }
         self.out.push_str(text);
         self.out.push('\n');
     }
@@ -38,15 +43,25 @@ impl Formatter {
         for import in &program.imports {
             self.emit_import(import);
         }
-        if !program.imports.is_empty() { self.blank(); }
+        if !program.imports.is_empty() {
+            self.blank();
+        }
         self.emit_app(&program.app);
     }
 
     fn emit_import(&mut self, import: &ImportDecl) {
         match &import.spec {
-            ImportSpec::Named(name) => self.line(&format!("import {} from \"{}\"", name, import.source)),
-            ImportSpec::Destructured(names) => self.line(&format!("import {{ {} }} from \"{}\"", names.join(", "), import.source)),
-            ImportSpec::Wildcard(alias) => self.line(&format!("import * as {} from \"{}\"", alias, import.source)),
+            ImportSpec::Named(name) => {
+                self.line(&format!("import {} from \"{}\"", name, import.source))
+            }
+            ImportSpec::Destructured(names) => self.line(&format!(
+                "import {{ {} }} from \"{}\"",
+                names.join(", "),
+                import.source
+            )),
+            ImportSpec::Wildcard(alias) => {
+                self.line(&format!("import * as {} from \"{}\"", alias, import.source))
+            }
         }
     }
 
@@ -55,7 +70,9 @@ impl Formatter {
         self.indent += 1;
         let mut first = true;
         for member in &app.members {
-            if !first { self.blank(); }
+            if !first {
+                self.blank();
+            }
             first = false;
             self.emit_app_member(member);
         }
@@ -88,9 +105,18 @@ impl Formatter {
         self.indent += 1;
         for field in &model.fields {
             if let Some(ref default) = field.default {
-                self.line(&format!("{}: {} = {}", field.name, self.type_str(&field.type_expr), self.expr_str(default)));
+                self.line(&format!(
+                    "{}: {} = {}",
+                    field.name,
+                    self.type_str(&field.type_expr),
+                    self.expr_str(default)
+                ));
             } else {
-                self.line(&format!("{}: {}", field.name, self.type_str(&field.type_expr)));
+                self.line(&format!(
+                    "{}: {}",
+                    field.name,
+                    self.type_str(&field.type_expr)
+                ));
             }
         }
         self.indent -= 1;
@@ -102,11 +128,20 @@ impl Formatter {
         } else {
             format!("({})", self.params_str(&screen.params))
         };
-        let mods: Vec<String> = screen.modifiers.iter().map(|m| match m {
-            ScreenModifier::Tab(icon) => format!(" tab: \"{}\"", icon),
-            ScreenModifier::Label(label) => format!(" label: \"{}\"", label),
-        }).collect();
-        self.line(&format!("screen {}{}{}", screen.name, params, mods.join("")));
+        let mods: Vec<String> = screen
+            .modifiers
+            .iter()
+            .map(|m| match m {
+                ScreenModifier::Tab(icon) => format!(" tab: \"{}\"", icon),
+                ScreenModifier::Label(label) => format!(" label: \"{}\"", label),
+            })
+            .collect();
+        self.line(&format!(
+            "screen {}{}{}",
+            screen.name,
+            params,
+            mods.join("")
+        ));
         self.indent += 1;
         for member in &screen.members {
             self.emit_screen_member(member);
@@ -150,15 +185,33 @@ impl Formatter {
 
     fn emit_state(&mut self, state: &StateDecl) {
         if let Some(ref default) = state.default {
-            self.line(&format!("state {}: {} = {}", state.name, self.type_str(&state.type_expr), self.expr_str(default)));
+            self.line(&format!(
+                "state {}: {} = {}",
+                state.name,
+                self.type_str(&state.type_expr),
+                self.expr_str(default)
+            ));
         } else {
-            self.line(&format!("state {}: {}", state.name, self.type_str(&state.type_expr)));
+            self.line(&format!(
+                "state {}: {}",
+                state.name,
+                self.type_str(&state.type_expr)
+            ));
         }
     }
 
     fn emit_const(&mut self, c: &ConstDecl) {
-        let ty = c.type_expr.as_ref().map(|t| format!(": {}", self.type_str(t))).unwrap_or_default();
-        self.line(&format!("const {}{} = {}", c.name, ty, self.expr_str(&c.value)));
+        let ty = c
+            .type_expr
+            .as_ref()
+            .map(|t| format!(": {}", self.type_str(t)))
+            .unwrap_or_default();
+        self.line(&format!(
+            "const {}{} = {}",
+            c.name,
+            ty,
+            self.expr_str(&c.value)
+        ));
     }
 
     fn emit_view_decl(&mut self, view: &ViewDecl) {
@@ -176,7 +229,12 @@ impl Formatter {
             ViewElement::Layout(layout) => {
                 let tokens = self.design_tokens_str(&layout.tokens);
                 let props = self.props_str(&layout.props);
-                self.line(&format!("{}{}{}", self.layout_kind_str(&layout.kind), tokens, props));
+                self.line(&format!(
+                    "{}{}{}",
+                    self.layout_kind_str(&layout.kind),
+                    tokens,
+                    props
+                ));
                 if !layout.children.is_empty() {
                     self.indent += 1;
                     for child in &layout.children {
@@ -189,38 +247,85 @@ impl Formatter {
                 let args: Vec<String> = widget.args.iter().map(|a| self.expr_str(a)).collect();
                 let tokens = self.design_tokens_str(&widget.tokens);
                 let props = self.props_str(&widget.props);
-                let args_str = if args.is_empty() { String::new() } else { format!(" {}", args.join(" ")) };
-                self.line(&format!("{}{}{}{}", self.widget_kind_str(&widget.kind), args_str, tokens, props));
+                let args_str = if args.is_empty() {
+                    String::new()
+                } else {
+                    format!(" {}", args.join(" "))
+                };
+                self.line(&format!(
+                    "{}{}{}{}",
+                    self.widget_kind_str(&widget.kind),
+                    args_str,
+                    tokens,
+                    props
+                ));
             }
             ViewElement::Input(input) => {
                 let tokens = self.design_tokens_str(&input.tokens);
                 let props = self.props_str(&input.props);
-                let action = input.action.as_ref().map(|a| format!(" -> {}", self.action_expr_str(a))).unwrap_or_default();
-                self.line(&format!("{} {}{}{}{}", self.input_kind_str(&input.kind), input.binding, tokens, props, action));
+                let action = input
+                    .action
+                    .as_ref()
+                    .map(|a| format!(" -> {}", self.action_expr_str(a)))
+                    .unwrap_or_default();
+                self.line(&format!(
+                    "{} {}{}{}{}",
+                    self.input_kind_str(&input.kind),
+                    input.binding,
+                    tokens,
+                    props,
+                    action
+                ));
             }
             ViewElement::Button(button) => {
-                let style = button.style.as_ref().map(|s| format!(".{}", s)).unwrap_or_default();
+                let style = button
+                    .style
+                    .as_ref()
+                    .map(|s| format!(".{}", s))
+                    .unwrap_or_default();
                 let tokens = self.design_tokens_str(&button.tokens);
                 let props = self.props_str(&button.props);
-                self.line(&format!("button{} {}{}{} -> {}", style, self.expr_str(&button.label), tokens, props, self.action_expr_str(&button.action)));
+                self.line(&format!(
+                    "button{} {}{}{} -> {}",
+                    style,
+                    self.expr_str(&button.label),
+                    tokens,
+                    props,
+                    self.action_expr_str(&button.action)
+                ));
             }
             ViewElement::If(if_v) => {
                 self.line(&format!("if {}", self.expr_str(&if_v.condition)));
                 self.indent += 1;
-                for child in &if_v.then_body { self.emit_view_element(child); }
+                for child in &if_v.then_body {
+                    self.emit_view_element(child);
+                }
                 self.indent -= 1;
                 if let Some(ref else_body) = if_v.else_body {
                     self.line("else");
                     self.indent += 1;
-                    for child in else_body { self.emit_view_element(child); }
+                    for child in else_body {
+                        self.emit_view_element(child);
+                    }
                     self.indent -= 1;
                 }
             }
             ViewElement::Each(each) => {
-                let idx = each.index_name.as_ref().map(|i| format!(", {}", i)).unwrap_or_default();
-                self.line(&format!("each {} as {}{}", self.expr_str(&each.iterable), each.item_name, idx));
+                let idx = each
+                    .index_name
+                    .as_ref()
+                    .map(|i| format!(", {}", i))
+                    .unwrap_or_default();
+                self.line(&format!(
+                    "each {} as {}{}",
+                    self.expr_str(&each.iterable),
+                    each.item_name,
+                    idx
+                ));
                 self.indent += 1;
-                for child in &each.body { self.emit_view_element(child); }
+                for child in &each.body {
+                    self.emit_view_element(child);
+                }
                 self.indent -= 1;
             }
             ViewElement::When(when) => {
@@ -229,13 +334,17 @@ impl Formatter {
                 for branch in &when.branches {
                     self.line(&format!("is {}", self.pattern_str(&branch.pattern)));
                     self.indent += 1;
-                    for child in &branch.body { self.emit_view_element(child); }
+                    for child in &branch.body {
+                        self.emit_view_element(child);
+                    }
                     self.indent -= 1;
                 }
                 self.indent -= 1;
             }
             ViewElement::ComponentRef(comp) => {
-                let args: Vec<String> = comp.args.iter()
+                let args: Vec<String> = comp
+                    .args
+                    .iter()
                     .filter(|(k, _)| k != "_")
                     .map(|(k, v)| format!("{}: {}", k, self.expr_str(v)))
                     .collect();
@@ -246,7 +355,9 @@ impl Formatter {
                 }
                 if !comp.children.is_empty() {
                     self.indent += 1;
-                    for child in &comp.children { self.emit_view_element(child); }
+                    for child in &comp.children {
+                        self.emit_view_element(child);
+                    }
                     self.indent -= 1;
                 }
             }
@@ -260,27 +371,49 @@ impl Formatter {
     }
 
     fn emit_action(&mut self, action: &ActionDecl) {
-        let params = if action.params.is_empty() { String::new() } else { format!("({})", self.params_str(&action.params)) };
+        let params = if action.params.is_empty() {
+            String::new()
+        } else {
+            format!("({})", self.params_str(&action.params))
+        };
         self.line(&format!("action {}{}", action.name, params));
         self.indent += 1;
-        for stmt in &action.body { self.emit_stmt(stmt); }
+        for stmt in &action.body {
+            self.emit_stmt(stmt);
+        }
         self.indent -= 1;
     }
 
     fn emit_fn(&mut self, func: &FnDecl) {
-        let params = if func.params.is_empty() { String::new() } else { format!("({})", self.params_str(&func.params)) };
-        let ret = func.return_type.as_ref().map(|t| format!(" -> {}", self.type_str(t))).unwrap_or_default();
+        let params = if func.params.is_empty() {
+            String::new()
+        } else {
+            format!("({})", self.params_str(&func.params))
+        };
+        let ret = func
+            .return_type
+            .as_ref()
+            .map(|t| format!(" -> {}", self.type_str(t)))
+            .unwrap_or_default();
         self.line(&format!("fn {}{}{}", func.name, params, ret));
         self.indent += 1;
-        for stmt in &func.body { self.emit_stmt(stmt); }
+        for stmt in &func.body {
+            self.emit_stmt(stmt);
+        }
         self.indent -= 1;
     }
 
     fn emit_on(&mut self, on: &OnDecl) {
-        let params = if on.params.is_empty() { String::new() } else { format!("({})", self.params_str(&on.params)) };
+        let params = if on.params.is_empty() {
+            String::new()
+        } else {
+            format!("({})", self.params_str(&on.params))
+        };
         self.line(&format!("on {}{}", on.event, params));
         self.indent += 1;
-        for stmt in &on.body { self.emit_stmt(stmt); }
+        for stmt in &on.body {
+            self.emit_stmt(stmt);
+        }
         self.indent -= 1;
     }
 
@@ -293,20 +426,29 @@ impl Formatter {
 
     fn emit_stmt(&mut self, stmt: &Stmt) {
         match stmt {
-            Stmt::Assign(name, value, _) => self.line(&format!("{} = {}", name, self.expr_str(value))),
+            Stmt::Assign(name, value, _) => {
+                self.line(&format!("{} = {}", name, self.expr_str(value)))
+            }
             Stmt::Let(name, ty, value, _) => {
-                let t = ty.as_ref().map(|t| format!(": {}", self.type_str(t))).unwrap_or_default();
+                let t = ty
+                    .as_ref()
+                    .map(|t| format!(": {}", self.type_str(t)))
+                    .unwrap_or_default();
                 self.line(&format!("let {}{} = {}", name, t, self.expr_str(value)));
             }
             Stmt::If(cond, then_body, else_body, _) => {
                 self.line(&format!("if {}", self.expr_str(cond)));
                 self.indent += 1;
-                for s in then_body { self.emit_stmt(s); }
+                for s in then_body {
+                    self.emit_stmt(s);
+                }
                 self.indent -= 1;
                 if let Some(else_stmts) = else_body {
                     self.line("else");
                     self.indent += 1;
-                    for s in else_stmts { self.emit_stmt(s); }
+                    for s in else_stmts {
+                        self.emit_stmt(s);
+                    }
                     self.indent -= 1;
                 }
             }
@@ -315,11 +457,17 @@ impl Formatter {
                 self.indent += 1;
                 for b in branches {
                     match &b.body {
-                        StmtOrExpr::Expr(e) => self.line(&format!("is {} -> {}", self.pattern_str(&b.pattern), self.expr_str(e))),
+                        StmtOrExpr::Expr(e) => self.line(&format!(
+                            "is {} -> {}",
+                            self.pattern_str(&b.pattern),
+                            self.expr_str(e)
+                        )),
                         StmtOrExpr::Stmt(stmts) => {
                             self.line(&format!("is {}", self.pattern_str(&b.pattern)));
                             self.indent += 1;
-                            for s in stmts { self.emit_stmt(s); }
+                            for s in stmts {
+                                self.emit_stmt(s);
+                            }
                             self.indent -= 1;
                         }
                     }
@@ -329,12 +477,18 @@ impl Formatter {
             Stmt::Navigate(nav) => self.line(&format!("navigate{}", self.navigate_str(nav))),
             Stmt::Emit(name, args, _) => {
                 let a: Vec<String> = args.iter().map(|a| self.expr_str(a)).collect();
-                if a.is_empty() { self.line(&format!("emit {}", name)); }
-                else { self.line(&format!("emit {}({})", name, a.join(", "))); }
+                if a.is_empty() {
+                    self.line(&format!("emit {}", name));
+                } else {
+                    self.line(&format!("emit {}({})", name, a.join(", ")));
+                }
             }
             Stmt::Return(value, _) => {
-                if let Some(v) = value { self.line(&format!("return {}", self.expr_str(v))); }
-                else { self.line("return"); }
+                if let Some(v) = value {
+                    self.line(&format!("return {}", self.expr_str(v)));
+                } else {
+                    self.line("return");
+                }
             }
             Stmt::Expr(expr, _) => self.line(&self.expr_str(expr)),
         }
@@ -356,10 +510,19 @@ impl Formatter {
                 format!("{}({})", self.expr_str(func), a.join(", "))
             }
             Expr::NamedCall(func, args, _) => {
-                let a: Vec<String> = args.iter().filter(|(k,_)| k != "_").map(|(k, v)| format!("{}: {}", k, self.expr_str(v))).collect();
+                let a: Vec<String> = args
+                    .iter()
+                    .filter(|(k, _)| k != "_")
+                    .map(|(k, v)| format!("{}: {}", k, self.expr_str(v)))
+                    .collect();
                 format!("{}({})", self.expr_str(func), a.join(", "))
             }
-            Expr::BinOp(l, op, r, _) => format!("{} {} {}", self.expr_str(l), self.binop_str(op), self.expr_str(r)),
+            Expr::BinOp(l, op, r, _) => format!(
+                "{} {} {}",
+                self.expr_str(l),
+                self.binop_str(op),
+                self.expr_str(r)
+            ),
             Expr::UnaryOp(UnaryOp::Not, e, _) => format!("not {}", self.expr_str(e)),
             Expr::UnaryOp(UnaryOp::Neg, e, _) => format!("-{}", self.expr_str(e)),
             Expr::Lambda(params, body, _) => {
@@ -367,11 +530,20 @@ impl Formatter {
                 format!("{} => {}", p.join(", "), self.expr_str(body))
             }
             Expr::Constructor(name, args, _) => {
-                let a: Vec<String> = args.iter().filter(|(k,_)| k != "_").map(|(k, v)| format!("{}: {}", k, self.expr_str(v))).collect();
+                let a: Vec<String> = args
+                    .iter()
+                    .filter(|(k, _)| k != "_")
+                    .map(|(k, v)| format!("{}: {}", k, self.expr_str(v)))
+                    .collect();
                 format!("{}({})", name, a.join(", "))
             }
             Expr::Pipe(l, r, _) => format!("{} |> {}", self.expr_str(l), self.expr_str(r)),
-            Expr::Conditional(c, t, e, _) => format!("if {} then {} else {}", self.expr_str(c), self.expr_str(t), self.expr_str(e)),
+            Expr::Conditional(c, t, e, _) => format!(
+                "if {} then {} else {}",
+                self.expr_str(c),
+                self.expr_str(t),
+                self.expr_str(e)
+            ),
             Expr::NilCoalesce(l, r, _) => format!("{} ?? {}", self.expr_str(l), self.expr_str(r)),
             Expr::Index(obj, idx, _) => format!("{}[{}]", self.expr_str(obj), self.expr_str(idx)),
             Expr::DesignToken(segs, _) => format!(".{}", segs.join(".")),
@@ -381,10 +553,20 @@ impl Formatter {
 
     fn binop_str(&self, op: &BinOp) -> &'static str {
         match op {
-            BinOp::Add => "+", BinOp::Sub => "-", BinOp::Mul => "*", BinOp::Div => "/",
-            BinOp::Mod => "%", BinOp::Eq => "==", BinOp::NotEq => "!=",
-            BinOp::Lt => "<", BinOp::Gt => ">", BinOp::LtEq => "<=", BinOp::GtEq => ">=",
-            BinOp::And => "and", BinOp::Or => "or", BinOp::Range => "..",
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Mod => "%",
+            BinOp::Eq => "==",
+            BinOp::NotEq => "!=",
+            BinOp::Lt => "<",
+            BinOp::Gt => ">",
+            BinOp::LtEq => "<=",
+            BinOp::GtEq => ">=",
+            BinOp::And => "and",
+            BinOp::Or => "or",
+            BinOp::Range => "..",
         }
     }
 
@@ -402,12 +584,16 @@ impl Formatter {
             }
             TypeExpr::Function(params, ret, _) => {
                 let p: Vec<String> = params.iter().map(|p| self.type_str(p)).collect();
-                let r = ret.as_ref().map(|r| format!(" -> {}", self.type_str(r))).unwrap_or_default();
+                let r = ret
+                    .as_ref()
+                    .map(|r| format!(" -> {}", self.type_str(r)))
+                    .unwrap_or_default();
                 format!("fn({}){}", p.join(", "), r)
             }
             TypeExpr::Action(params, _) => {
-                if params.is_empty() { "action".to_string() }
-                else {
+                if params.is_empty() {
+                    "action".to_string()
+                } else {
                     let p: Vec<String> = params.iter().map(|p| self.type_str(p)).collect();
                     format!("action({})", p.join(", "))
                 }
@@ -416,24 +602,45 @@ impl Formatter {
     }
 
     fn params_str(&self, params: &[Param]) -> String {
-        params.iter().map(|p| {
-            let default = p.default.as_ref().map(|d| format!(" = {}", self.expr_str(d))).unwrap_or_default();
-            format!("{}: {}{}", p.name, self.type_str(&p.type_expr), default)
-        }).collect::<Vec<_>>().join(", ")
+        params
+            .iter()
+            .map(|p| {
+                let default = p
+                    .default
+                    .as_ref()
+                    .map(|d| format!(" = {}", self.expr_str(d)))
+                    .unwrap_or_default();
+                format!("{}: {}{}", p.name, self.type_str(&p.type_expr), default)
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 
     fn design_tokens_str(&self, tokens: &[DesignToken]) -> String {
-        if tokens.is_empty() { return String::new(); }
-        let parts: Vec<String> = tokens.iter().map(|t| {
-            if t.segments.len() == 1 { format!(" .{}", t.segments[0]) }
-            else { format!(" {}", t.segments.join(".")) }
-        }).collect();
+        if tokens.is_empty() {
+            return String::new();
+        }
+        let parts: Vec<String> = tokens
+            .iter()
+            .map(|t| {
+                if t.segments.len() == 1 {
+                    format!(" .{}", t.segments[0])
+                } else {
+                    format!(" {}", t.segments.join("."))
+                }
+            })
+            .collect();
         parts.join("")
     }
 
     fn props_str(&self, props: &[PropAssign]) -> String {
-        if props.is_empty() { return String::new(); }
-        let parts: Vec<String> = props.iter().map(|p| format!(" {}: {}", p.name, self.expr_str(&p.value))).collect();
+        if props.is_empty() {
+            return String::new();
+        }
+        let parts: Vec<String> = props
+            .iter()
+            .map(|p| format!(" {}: {}", p.name, self.expr_str(&p.value)))
+            .collect();
         parts.join("")
     }
 
@@ -441,8 +648,11 @@ impl Formatter {
         match action {
             ActionExpr::Call(name, args, _) => {
                 let a: Vec<String> = args.iter().map(|a| self.expr_str(a)).collect();
-                if a.is_empty() { format!("{}()", name) }
-                else { format!("{}({})", name, a.join(", ")) }
+                if a.is_empty() {
+                    format!("{}()", name)
+                } else {
+                    format!("{}({})", name, a.join(", "))
+                }
             }
             ActionExpr::Navigate(nav) => format!("navigate{}", self.navigate_str(nav)),
             ActionExpr::Lambda(_, body, _) => format!("-> {}", self.expr_str(body)),
@@ -473,27 +683,37 @@ impl Formatter {
 
     fn layout_kind_str(&self, kind: &LayoutKind) -> &'static str {
         match kind {
-            LayoutKind::Column => "column", LayoutKind::Row => "row",
-            LayoutKind::Stack => "stack", LayoutKind::Grid => "grid",
-            LayoutKind::Scroll => "scroll", LayoutKind::Wrap => "wrap",
+            LayoutKind::Column => "column",
+            LayoutKind::Row => "row",
+            LayoutKind::Stack => "stack",
+            LayoutKind::Grid => "grid",
+            LayoutKind::Scroll => "scroll",
+            LayoutKind::Wrap => "wrap",
         }
     }
 
     fn widget_kind_str(&self, kind: &WidgetKind) -> &'static str {
         match kind {
-            WidgetKind::Text => "text", WidgetKind::Heading => "heading",
-            WidgetKind::Image => "image", WidgetKind::Icon => "icon",
-            WidgetKind::Badge => "badge", WidgetKind::Progress => "progress",
+            WidgetKind::Text => "text",
+            WidgetKind::Heading => "heading",
+            WidgetKind::Image => "image",
+            WidgetKind::Icon => "icon",
+            WidgetKind::Badge => "badge",
+            WidgetKind::Progress => "progress",
             WidgetKind::Avatar => "avatar",
         }
     }
 
     fn input_kind_str(&self, kind: &InputKind) -> &'static str {
         match kind {
-            InputKind::TextField => "textfield", InputKind::TextArea => "textarea",
-            InputKind::Checkbox => "checkbox", InputKind::Toggle => "toggle",
-            InputKind::Slider => "slider", InputKind::Picker => "picker",
-            InputKind::DatePicker => "datepicker", InputKind::Segmented => "segmented",
+            InputKind::TextField => "textfield",
+            InputKind::TextArea => "textarea",
+            InputKind::Checkbox => "checkbox",
+            InputKind::Toggle => "toggle",
+            InputKind::Slider => "slider",
+            InputKind::Picker => "picker",
+            InputKind::DatePicker => "datepicker",
+            InputKind::Segmented => "segmented",
             InputKind::Stepper => "stepper",
         }
     }
@@ -505,7 +725,11 @@ mod tests {
 
     fn roundtrip(source: &str) -> String {
         let result = crate::parser::parse(source);
-        assert!(result.program.is_some(), "Parse failed: {:?}", result.errors);
+        assert!(
+            result.program.is_some(),
+            "Parse failed: {:?}",
+            result.errors
+        );
         format(result.program.as_ref().unwrap())
     }
 
@@ -523,6 +747,11 @@ mod tests {
         let formatted = roundtrip(original);
         // The formatted output should also parse
         let result2 = crate::parser::parse(&formatted);
-        assert!(result2.program.is_some(), "Formatted code failed to parse:\n{}\nErrors: {:?}", formatted, result2.errors);
+        assert!(
+            result2.program.is_some(),
+            "Formatted code failed to parse:\n{}\nErrors: {:?}",
+            formatted,
+            result2.errors
+        );
     }
 }

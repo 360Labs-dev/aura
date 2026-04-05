@@ -117,7 +117,11 @@ pub fn lex(source: &str) -> LexResult {
     // Phase 2: Synthesize Indent/Dedent from indentation
     let tokens = process_indentation(source, non_comment_tokens, &mut errors);
 
-    LexResult { tokens, errors, comments }
+    LexResult {
+        tokens,
+        errors,
+        comments,
+    }
 }
 
 /// Phase 1: Tokenize with logos, producing raw tokens with spans.

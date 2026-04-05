@@ -181,8 +181,7 @@ impl BuildManifest {
         }
 
         // Remove invalidated files from unchanged
-        let invalidated_set: HashSet<&str> =
-            invalidated.iter().map(|s| s.as_str()).collect();
+        let invalidated_set: HashSet<&str> = invalidated.iter().map(|s| s.as_str()).collect();
         unchanged.retain(|f| !invalidated_set.contains(f.as_str()));
 
         CacheCheck {
@@ -312,7 +311,14 @@ mod tests {
     #[test]
     fn test_dependency_invalidation() {
         let mut manifest = BuildManifest::new();
-        manifest.update_file("models/todo.aura", "hash1", 1, true, true, vec!["Todo".to_string()]);
+        manifest.update_file(
+            "models/todo.aura",
+            "hash1",
+            1,
+            true,
+            true,
+            vec!["Todo".to_string()],
+        );
         manifest.update_file("screens/main.aura", "hash2", 1, true, true, Vec::new());
         manifest.set_dependencies("screens/main.aura", vec!["models/todo.aura".to_string()]);
 
@@ -324,7 +330,11 @@ mod tests {
         let check = manifest.check(&files);
 
         assert_eq!(check.changed.len(), 1, "todo.aura changed");
-        assert_eq!(check.invalidated.len(), 1, "main.aura should be invalidated");
+        assert_eq!(
+            check.invalidated.len(),
+            1,
+            "main.aura should be invalidated"
+        );
         assert_eq!(check.invalidated[0], "screens/main.aura");
         assert!(check.unchanged.is_empty(), "Nothing should be unchanged");
     }

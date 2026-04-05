@@ -194,8 +194,16 @@ fn base64_encode(data: &[u8]) -> String {
     let mut i = 0;
     while i < data.len() {
         let b0 = data[i] as u32;
-        let b1 = if i + 1 < data.len() { data[i + 1] as u32 } else { 0 };
-        let b2 = if i + 2 < data.len() { data[i + 2] as u32 } else { 0 };
+        let b1 = if i + 1 < data.len() {
+            data[i + 1] as u32
+        } else {
+            0
+        };
+        let b2 = if i + 2 < data.len() {
+            data[i + 2] as u32
+        } else {
+            0
+        };
         let triple = (b0 << 16) | (b1 << 8) | b2;
         result.push(chars[((triple >> 18) & 0x3f) as usize] as char);
         result.push(chars[((triple >> 12) & 0x3f) as usize] as char);

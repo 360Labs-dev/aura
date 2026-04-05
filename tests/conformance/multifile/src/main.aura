@@ -1,0 +1,11 @@
+app MultiFileTest
+  theme: modern.dark
+  navigation: tabs
+
+  screen Home tab: "house" label: "Home"
+    state tasks: list[Task] = []
+    view
+      column gap.md padding.lg
+        heading "Home" size.xl .bold
+        each tasks as task
+          TaskCard(task: task)

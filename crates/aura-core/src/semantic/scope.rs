@@ -90,7 +90,9 @@ impl SymbolTable {
     }
 
     fn define(&mut self, scope: usize, symbol: Symbol) {
-        self.scopes[scope].symbols.insert(symbol.name.clone(), symbol);
+        self.scopes[scope]
+            .symbols
+            .insert(symbol.name.clone(), symbol);
     }
 
     pub fn lookup(&self, scope: usize, name: &str) -> Option<&Symbol> {
@@ -169,11 +171,13 @@ impl SemanticAnalyzer {
     // === Error helpers ===
 
     fn error(&mut self, code: ErrorCode, message: String, span: Span) {
-        self.errors.push(AuraError::new(code, Severity::Error, message, span));
+        self.errors
+            .push(AuraError::new(code, Severity::Error, message, span));
     }
 
     fn warning(&mut self, code: ErrorCode, message: String, span: Span) {
-        self.errors.push(AuraError::new(code, Severity::Warning, message, span));
+        self.errors
+            .push(AuraError::new(code, Severity::Warning, message, span));
     }
 
     fn error_with_fix(&mut self, code: ErrorCode, message: String, span: Span, fix: Fix) {
@@ -292,10 +296,7 @@ impl SemanticAnalyzer {
             if let Some(prev_span) = seen_fields.get(&field.name) {
                 self.error(
                     ErrorCode::E0105,
-                    format!(
-                        "Duplicate field '{}' in model '{}'",
-                        field.name, model.name
-                    ),
+                    format!("Duplicate field '{}' in model '{}'", field.name, model.name),
                     field.span,
                 );
                 continue;
@@ -479,7 +480,10 @@ impl SemanticAnalyzer {
                     if sym.kind != SymbolKind::State && sym.kind != SymbolKind::Parameter {
                         self.warning(
                             ErrorCode::E0310,
-                            format!("'{}' is not a state variable — input binding may not update", binding_name),
+                            format!(
+                                "'{}' is not a state variable — input binding may not update",
+                                binding_name
+                            ),
                             input.span,
                         );
                     }
@@ -498,7 +502,9 @@ impl SemanticAnalyzer {
                     if_view.span,
                 );
                 // TYPE NARROWING for view conditionals
-                let narrow_scope = self.symbols.push_scope("view_if_narrow", self.current_scope);
+                let narrow_scope = self
+                    .symbols
+                    .push_scope("view_if_narrow", self.current_scope);
                 self.apply_narrowing(&if_view.condition, narrow_scope);
                 let prev = self.current_scope;
                 self.current_scope = narrow_scope;
@@ -521,10 +527,7 @@ impl SemanticAnalyzer {
                     _ => {
                         self.error(
                             ErrorCode::E0101,
-                            format!(
-                                "'each' requires a list, got {}",
-                                iter_type.display_name()
-                            ),
+                            format!("'each' requires a list, got {}", iter_type.display_name()),
                             each.span,
                         );
                         AuraType::Poison
@@ -532,9 +535,9 @@ impl SemanticAnalyzer {
                 };
 
                 // Register loop variable in a new scope
-                let loop_scope =
-                    self.symbols
-                        .push_scope(&format!("each_{}", each.item_name), self.current_scope);
+                let loop_scope = self
+                    .symbols
+                    .push_scope(&format!("each_{}", each.item_name), self.current_scope);
                 self.symbols.define(
                     loop_scope,
                     Symbol {
@@ -563,7 +566,11 @@ impl SemanticAnalyzer {
             }
             ViewElement::ComponentRef(comp_ref) => {
                 // Verify component exists
-                if self.symbols.lookup(self.current_scope, &comp_ref.name).is_none() {
+                if self
+                    .symbols
+                    .lookup(self.current_scope, &comp_ref.name)
+                    .is_none()
+                {
                     if !self.is_poisoned(&comp_ref.name) {
                         self.error(
                             ErrorCode::E0104,
@@ -586,10 +593,9 @@ impl SemanticAnalyzer {
     // === Action analysis ===
 
     fn analyze_action(&mut self, action: &ActionDecl) {
-        let scope = self.symbols.push_scope(
-            &format!("action_{}", action.name),
-            self.current_scope,
-        );
+        let scope = self
+            .symbols
+            .push_scope(&format!("action_{}", action.name), self.current_scope);
 
         // Register as action in parent scope
         let param_types: Vec<AuraType> = action
@@ -633,10 +639,9 @@ impl SemanticAnalyzer {
     // === Function analysis ===
 
     fn analyze_fn(&mut self, func: &FnDecl) {
-        let scope = self.symbols.push_scope(
-            &format!("fn_{}", func.name),
-            self.current_scope,
-        );
+        let scope = self
+            .symbols
+            .push_scope(&format!("fn_{}", func.name), self.current_scope);
 
         let param_types: Vec<AuraType> = func
             .params
@@ -654,7 +659,8 @@ impl SemanticAnalyzer {
             Symbol {
                 name: func.name.clone(),
                 kind: SymbolKind::Function,
-                resolved_type: AuraType::Function(FunctionType { type_params: Vec::new(),
+                resolved_type: AuraType::Function(FunctionType {
+                    type_params: Vec::new(),
                     params: param_types,
                     return_type: Box::new(return_type),
                 }),
@@ -728,9 +734,7 @@ impl SemanticAnalyzer {
                 }
             }
             Stmt::Let(name, type_expr, value, span) => {
-                let declared_type = type_expr
-                    .as_ref()
-                    .map(|t| self.resolve_type_expr(t));
+                let declared_type = type_expr.as_ref().map(|t| self.resolve_type_expr(t));
                 let value_type = self.infer_expr_type(value);
 
                 let resolved = if let Some(ref dt) = declared_type {
@@ -803,10 +807,15 @@ impl SemanticAnalyzer {
         match type_expr {
             TypeExpr::Named(name, span) => self.resolve_type_name(name, *span),
             TypeExpr::Collection(kind, args, _span) => {
-                let resolved_args: Vec<_> = args.iter().map(|a| self.resolve_type_expr(a)).collect();
+                let resolved_args: Vec<_> =
+                    args.iter().map(|a| self.resolve_type_expr(a)).collect();
                 match kind.as_str() {
-                    "list" => AuraType::List(Box::new(resolved_args.into_iter().next().unwrap_or(AuraType::Poison))),
-                    "set" => AuraType::Set(Box::new(resolved_args.into_iter().next().unwrap_or(AuraType::Poison))),
+                    "list" => AuraType::List(Box::new(
+                        resolved_args.into_iter().next().unwrap_or(AuraType::Poison),
+                    )),
+                    "set" => AuraType::Set(Box::new(
+                        resolved_args.into_iter().next().unwrap_or(AuraType::Poison),
+                    )),
                     "map" => {
                         let mut iter = resolved_args.into_iter();
                         let k = iter.next().unwrap_or(AuraType::Poison);
@@ -834,18 +843,21 @@ impl SemanticAnalyzer {
                 AuraType::Enum(resolved)
             }
             TypeExpr::Function(params, ret, _span) => {
-                let param_types: Vec<_> = params.iter().map(|p| self.resolve_type_expr(p)).collect();
+                let param_types: Vec<_> =
+                    params.iter().map(|p| self.resolve_type_expr(p)).collect();
                 let return_type = ret
                     .as_ref()
                     .map(|r| self.resolve_type_expr(r))
                     .unwrap_or(AuraType::Primitive(PrimitiveType::Text));
-                AuraType::Function(FunctionType { type_params: Vec::new(),
+                AuraType::Function(FunctionType {
+                    type_params: Vec::new(),
                     params: param_types,
                     return_type: Box::new(return_type),
                 })
             }
             TypeExpr::Action(params, _span) => {
-                let param_types: Vec<_> = params.iter().map(|p| self.resolve_type_expr(p)).collect();
+                let param_types: Vec<_> =
+                    params.iter().map(|p| self.resolve_type_expr(p)).collect();
                 AuraType::Action(param_types)
             }
         }
@@ -901,7 +913,9 @@ impl SemanticAnalyzer {
                 match &obj_type {
                     AuraType::Named(type_name) => {
                         // Search model fields in the symbol table
-                        if let Some(model_scope) = self.symbols.scopes.iter().find(|s| s.name == *type_name) {
+                        if let Some(model_scope) =
+                            self.symbols.scopes.iter().find(|s| s.name == *type_name)
+                        {
                             if let Some(field) = model_scope.symbols.get(member.as_str()) {
                                 return field.resolved_type.clone();
                             }
@@ -914,31 +928,28 @@ impl SemanticAnalyzer {
                             _ => AuraType::Poison, // Unknown field
                         }
                     }
-                    AuraType::List(inner) => {
-                        match member.as_str() {
-                            "count" | "count()" => AuraType::Primitive(PrimitiveType::Int),
-                            "isEmpty" => AuraType::Primitive(PrimitiveType::Bool),
-                            "first" | "last" => AuraType::Optional(inner.clone()),
-                            _ => AuraType::Poison,
+                    AuraType::List(inner) => match member.as_str() {
+                        "count" | "count()" => AuraType::Primitive(PrimitiveType::Int),
+                        "isEmpty" => AuraType::Primitive(PrimitiveType::Bool),
+                        "first" | "last" => AuraType::Optional(inner.clone()),
+                        _ => AuraType::Poison,
+                    },
+                    AuraType::Primitive(PrimitiveType::Text) => match member.as_str() {
+                        "count" | "count()" => AuraType::Primitive(PrimitiveType::Int),
+                        "isEmpty" => AuraType::Primitive(PrimitiveType::Bool),
+                        "trim" | "uppercase" | "lowercase" => {
+                            AuraType::Primitive(PrimitiveType::Text)
                         }
-                    }
-                    AuraType::Primitive(PrimitiveType::Text) => {
-                        match member.as_str() {
-                            "count" | "count()" => AuraType::Primitive(PrimitiveType::Int),
-                            "isEmpty" => AuraType::Primitive(PrimitiveType::Bool),
-                            "trim" | "uppercase" | "lowercase" => AuraType::Primitive(PrimitiveType::Text),
-                            _ => AuraType::Poison,
-                        }
-                    }
-                    AuraType::Primitive(PrimitiveType::Int) | AuraType::Primitive(PrimitiveType::Float) => {
-                        match member.as_str() {
-                            "toFloat" => AuraType::Primitive(PrimitiveType::Float),
-                            "toInt" => AuraType::Primitive(PrimitiveType::Int),
-                            "toText" => AuraType::Primitive(PrimitiveType::Text),
-                            "abs" => obj_type.clone(),
-                            _ => AuraType::Poison,
-                        }
-                    }
+                        _ => AuraType::Poison,
+                    },
+                    AuraType::Primitive(PrimitiveType::Int)
+                    | AuraType::Primitive(PrimitiveType::Float) => match member.as_str() {
+                        "toFloat" => AuraType::Primitive(PrimitiveType::Float),
+                        "toInt" => AuraType::Primitive(PrimitiveType::Int),
+                        "toText" => AuraType::Primitive(PrimitiveType::Text),
+                        "abs" => obj_type.clone(),
+                        _ => AuraType::Poison,
+                    },
                     AuraType::Optional(inner) => {
                         // Accessing members on optional — pass through to inner type
                         AuraType::Poison // Should use nil-check first
@@ -953,18 +964,25 @@ impl SemanticAnalyzer {
                 if let Expr::MemberAccess(obj, method, _) = func.as_ref() {
                     let obj_type = self.infer_expr_type(obj);
                     match (&obj_type, method.as_str()) {
-                        (AuraType::List(elem_type), "where" | "filter" | "find" | "map" | "forEach") => {
+                        (
+                            AuraType::List(elem_type),
+                            "where" | "filter" | "find" | "map" | "forEach",
+                        ) => {
                             // If the first arg is a lambda, register its param with elem_type
                             if let Some(Expr::Lambda(params, body, _)) = args.first() {
                                 if let Some(param) = params.first() {
-                                    let lambda_scope = self.symbols.push_scope("lambda", self.current_scope);
-                                    self.symbols.define(lambda_scope, Symbol {
-                                        name: param.name.clone(),
-                                        kind: SymbolKind::Parameter,
-                                        resolved_type: *elem_type.clone(),
-                                        span: param.span,
-                                        poisoned: false,
-                                    });
+                                    let lambda_scope =
+                                        self.symbols.push_scope("lambda", self.current_scope);
+                                    self.symbols.define(
+                                        lambda_scope,
+                                        Symbol {
+                                            name: param.name.clone(),
+                                            kind: SymbolKind::Parameter,
+                                            resolved_type: *elem_type.clone(),
+                                            span: param.span,
+                                            poisoned: false,
+                                        },
+                                    );
                                     let prev = self.current_scope;
                                     self.current_scope = lambda_scope;
                                     let body_type = self.infer_expr_type(body);
@@ -1020,8 +1038,14 @@ impl SemanticAnalyzer {
                         // Numeric ops return the operand type
                         lt
                     }
-                    BinOp::Eq | BinOp::NotEq | BinOp::Lt | BinOp::Gt | BinOp::LtEq
-                    | BinOp::GtEq | BinOp::And | BinOp::Or => {
+                    BinOp::Eq
+                    | BinOp::NotEq
+                    | BinOp::Lt
+                    | BinOp::Gt
+                    | BinOp::LtEq
+                    | BinOp::GtEq
+                    | BinOp::And
+                    | BinOp::Or => {
                         // Comparison/logical ops: check for secret == comparison
                         if matches!(op, BinOp::Eq | BinOp::NotEq) {
                             if lt.is_no_log() {
@@ -1053,9 +1077,7 @@ impl SemanticAnalyzer {
                 // Pipe result is the right side's return type — simplified
                 AuraType::Poison
             }
-            Expr::Conditional(_, then_expr, _else_expr, _span) => {
-                self.infer_expr_type(then_expr)
-            }
+            Expr::Conditional(_, then_expr, _else_expr, _span) => self.infer_expr_type(then_expr),
             Expr::NilCoalesce(left, right, _span) => {
                 let lt = self.infer_expr_type(left);
                 let _rt = self.infer_expr_type(right);
@@ -1188,14 +1210,19 @@ impl SemanticAnalyzer {
             // Function type compatibility
             (AuraType::Function(a), AuraType::Function(b)) => {
                 a.params.len() == b.params.len()
-                    && a.params.iter().zip(&b.params).all(|(ap, bp)| self.types_compatible(ap, bp))
+                    && a.params
+                        .iter()
+                        .zip(&b.params)
+                        .all(|(ap, bp)| self.types_compatible(ap, bp))
                     && self.types_compatible(&a.return_type, &b.return_type)
             }
 
             // Action compatibility
             (AuraType::Action(a), AuraType::Action(b)) => {
                 a.len() == b.len()
-                    && a.iter().zip(b).all(|(ap, bp)| self.types_compatible(ap, bp))
+                    && a.iter()
+                        .zip(b)
+                        .all(|(ap, bp)| self.types_compatible(ap, bp))
             }
 
             // Enum compatibility (same variants)
@@ -1221,13 +1248,16 @@ impl SemanticAnalyzer {
                         if let Some(sym) = self.symbols.lookup(self.current_scope, name) {
                             if let AuraType::Optional(inner) = &sym.resolved_type {
                                 // Narrow: optional[T] → T in the then-branch
-                                self.symbols.define(scope, Symbol {
-                                    name: name.clone(),
-                                    kind: sym.kind.clone(),
-                                    resolved_type: *inner.clone(),
-                                    span: *span,
-                                    poisoned: false,
-                                });
+                                self.symbols.define(
+                                    scope,
+                                    Symbol {
+                                        name: name.clone(),
+                                        kind: sym.kind.clone(),
+                                        resolved_type: *inner.clone(),
+                                        span: *span,
+                                        poisoned: false,
+                                    },
+                                );
                             }
                         }
                     }
@@ -1250,7 +1280,10 @@ impl SemanticAnalyzer {
             crate::errors::suggest_similar(name, &visible_refs, 3)
         {
             (
-                format!("Unknown variable '{}'. Did you mean '{}'?", name, suggestion),
+                format!(
+                    "Unknown variable '{}'. Did you mean '{}'?",
+                    name, suggestion
+                ),
                 Some(Fix {
                     action: FixAction::Replace,
                     span,
@@ -1274,12 +1307,24 @@ impl SemanticAnalyzer {
 
     fn expr_span(&self, expr: &Expr) -> Span {
         match expr {
-            Expr::IntLit(_, s) | Expr::FloatLit(_, s) | Expr::StringLit(_, s)
-            | Expr::PercentLit(_, s) | Expr::BoolLit(_, s) | Expr::Nil(s) | Expr::Var(_, s) => *s,
-            Expr::MemberAccess(_, _, s) | Expr::Call(_, _, s) | Expr::NamedCall(_, _, s)
-            | Expr::Index(_, _, s) | Expr::BinOp(_, _, _, s) | Expr::UnaryOp(_, _, s)
-            | Expr::Lambda(_, _, s) | Expr::Constructor(_, _, s) | Expr::Pipe(_, _, s)
-            | Expr::Conditional(_, _, _, s) | Expr::NilCoalesce(_, _, s)
+            Expr::IntLit(_, s)
+            | Expr::FloatLit(_, s)
+            | Expr::StringLit(_, s)
+            | Expr::PercentLit(_, s)
+            | Expr::BoolLit(_, s)
+            | Expr::Nil(s)
+            | Expr::Var(_, s) => *s,
+            Expr::MemberAccess(_, _, s)
+            | Expr::Call(_, _, s)
+            | Expr::NamedCall(_, _, s)
+            | Expr::Index(_, _, s)
+            | Expr::BinOp(_, _, _, s)
+            | Expr::UnaryOp(_, _, s)
+            | Expr::Lambda(_, _, s)
+            | Expr::Constructor(_, _, s)
+            | Expr::Pipe(_, _, s)
+            | Expr::Conditional(_, _, _, s)
+            | Expr::NilCoalesce(_, _, s)
             | Expr::DesignToken(_, s) => *s,
         }
     }
@@ -1319,19 +1364,52 @@ fn is_compound_design_token(segments: &[String]) -> bool {
     let first = segments[0].as_str();
     matches!(
         first,
-        "gap" | "padding" | "margin" | "size" | "width" | "height" | "radius" | "shadow"
-            | "elevation" | "opacity" | "align" | "justify" | "max" | "min"
-            | "onPrimary" | "onAccent" | "onDanger" | "onSurface"
-            | "horizontal" | "vertical" | "top" | "bottom" | "left" | "right"
-            | "start" | "end"
+        "gap"
+            | "padding"
+            | "margin"
+            | "size"
+            | "width"
+            | "height"
+            | "radius"
+            | "shadow"
+            | "elevation"
+            | "opacity"
+            | "align"
+            | "justify"
+            | "max"
+            | "min"
+            | "onPrimary"
+            | "onAccent"
+            | "onDanger"
+            | "onSurface"
+            | "horizontal"
+            | "vertical"
+            | "top"
+            | "bottom"
+            | "left"
+            | "right"
+            | "start"
+            | "end"
     )
 }
 
 fn suggest_design_token(name: &str) -> String {
     // Simple Levenshtein-based suggestion
     let candidates = [
-        "xs", "sm", "md", "lg", "xl", "bold", "accent", "primary", "secondary",
-        "muted", "danger", "rounded", "surface", "center",
+        "xs",
+        "sm",
+        "md",
+        "lg",
+        "xl",
+        "bold",
+        "accent",
+        "primary",
+        "secondary",
+        "muted",
+        "danger",
+        "rounded",
+        "surface",
+        "center",
     ];
     let refs: Vec<&str> = candidates.to_vec();
     if let Some((suggestion, _)) = crate::errors::suggest_similar(name, &refs, 3) {
@@ -1383,7 +1461,8 @@ mod tests {
 
     #[test]
     fn test_clean_program() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   model Todo
     title: text
@@ -1391,30 +1470,35 @@ app Test
   screen Main
     state todos: list[Todo] = []
     view
-      text \"Hello\"");
+      text \"Hello\"",
+        );
         assert!(errors.is_empty(), "Expected no errors, got: {:?}", errors);
     }
 
     #[test]
     fn test_duplicate_field() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   model Bad
     name: text
-    name: int");
+    name: int",
+        );
         assert!(has_error(&errors, ErrorCode::E0105));
     }
 
     #[test]
     fn test_state_mutation_in_view() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   screen Main
     state x: int = 0
     view
       text \"hi\"
     action doStuff
-      x = x + 1");
+      x = x + 1",
+        );
         // The action mutation is fine, no E0301
         assert!(!has_error(&errors, ErrorCode::E0301));
     }
@@ -1422,30 +1506,41 @@ app Test
     #[test]
     fn test_secret_type_in_equality() {
         // Test at the action level where params are in scope
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   screen Main
     view
       text \"hi\"
     action check(a: secret, b: secret)
-      let result = a == b");
-        assert!(has_error(&errors, ErrorCode::E0203), "Expected E0203 for secret == comparison. Errors: {:?}", errors);
+      let result = a == b",
+        );
+        assert!(
+            has_error(&errors, ErrorCode::E0203),
+            "Expected E0203 for secret == comparison. Errors: {:?}",
+            errors
+        );
     }
 
     #[test]
     fn test_unknown_variable_with_suggestion() {
-        let result = analyze("\
+        let result = analyze(
+            "\
 app Test
   screen Main
     state todos: list[text] = []
     view
       text \"hi\"
     action test
-      todoos = []");
+      todoos = []",
+        );
         let err = result.errors.iter().find(|e| e.code == ErrorCode::E0103);
         assert!(err.is_some(), "Expected E0103 error");
         let err = err.unwrap();
-        assert!(err.message.contains("todoos"), "Error should mention the typo");
+        assert!(
+            err.message.contains("todoos"),
+            "Error should mention the typo"
+        );
         // Should have a fix suggestion
         assert!(err.fix.is_some(), "Should suggest a fix");
         let fix = err.fix.as_ref().unwrap();
@@ -1455,7 +1550,8 @@ app Test
 
     #[test]
     fn test_error_poisoning() {
-        let result = analyze("\
+        let result = analyze(
+            "\
 app Test
   screen Main
     state items: list[text] = []
@@ -1464,51 +1560,75 @@ app Test
     action test
       let x = unknownVar
       let y = x + 1
-      let z = y + 2");
+      let z = y + 2",
+        );
         // Only ONE error for unknownVar, not cascading errors for x and y
-        let e103_count = result.errors.iter().filter(|e| e.code == ErrorCode::E0103).count();
-        assert_eq!(e103_count, 1, "Poisoning should suppress cascade errors. Got {} E0103 errors", e103_count);
+        let e103_count = result
+            .errors
+            .iter()
+            .filter(|e| e.code == ErrorCode::E0103)
+            .count();
+        assert_eq!(
+            e103_count, 1,
+            "Poisoning should suppress cascade errors. Got {} E0103 errors",
+            e103_count
+        );
     }
 
     #[test]
     fn test_design_token_validation() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   screen Main
     view
       column .md .accent
-        text \"hi\" .bold");
+        text \"hi\" .bold",
+        );
         // All valid tokens — no errors
-        assert!(!has_error(&errors, ErrorCode::E0400), "Errors: {:?}", errors);
+        assert!(
+            !has_error(&errors, ErrorCode::E0400),
+            "Errors: {:?}",
+            errors
+        );
     }
 
     #[test]
     fn test_invalid_design_token() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   screen Main
     view
       column .xxxlarge
-        text \"hi\"");
+        text \"hi\"",
+        );
         assert!(has_error(&errors, ErrorCode::E0400));
     }
 
     #[test]
     fn test_each_registers_loop_var() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   screen Main
     state items: list[text] = []
     view
       each items as item
-        text item");
+        text item",
+        );
         // item should be resolvable — no E0103
-        assert!(!has_error(&errors, ErrorCode::E0103), "Errors: {:?}", errors);
+        assert!(
+            !has_error(&errors, ErrorCode::E0103),
+            "Errors: {:?}",
+            errors
+        );
     }
 
     #[test]
     fn test_fn_and_action_registered() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   screen Main
     state x: int = 0
@@ -1517,21 +1637,24 @@ app Test
     action increment
       x = x + 1
     fn double(n: int) -> int
-      n * 2");
+      n * 2",
+        );
         // Should be clean
         assert!(errors.is_empty(), "Errors: {:?}", errors);
     }
 
     #[test]
     fn test_component_props_in_scope() {
-        let errors = analyze_and_check("\
+        let errors = analyze_and_check(
+            "\
 app Test
   component Card(title: text, count: int)
     view
       text title
   screen Main
     view
-      Card(title: \"hello\", count: 5)");
+      Card(title: \"hello\", count: 5)",
+        );
         assert!(errors.is_empty(), "Errors: {:?}", errors);
     }
 }

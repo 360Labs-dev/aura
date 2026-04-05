@@ -9,11 +9,28 @@
 
 # Aura
 
-### The programming language that makes AI agents 10x more productive.
+### Build native apps with AI, not boilerplate.
 
-Aura is a new programming language built from the ground up for AI coding agents. It has a built-in design system, compiles to native code on every platform, and produces better error messages than any language you've used before.
+<p align="center">
+  <strong>One compact source file in. Real web, iOS, and Android apps out.</strong>
+</p>
 
-One file. Three native platforms. Zero boilerplate.
+<p align="center">
+  Aura is an AI-native language and compiler for product UI. It gives coding agents a smaller search space, a stronger compiler contract, first-class design tokens, compile-time security types, and platform-native code generation.
+</p>
+
+<p align="center">
+  <strong>Fewer tokens. Better first compile success. Native output on every platform.</strong>
+</p>
+
+Aura is built for the way agents actually generate software. Instead of spreading intent across components, styles, state containers, and platform glue, Aura lets the model express the product directly and compile it into SwiftUI, Jetpack Compose, and HTML/CSS/JS.
+
+**What makes Aura different**
+
+- **One source file to multiple native targets** with no shared runtime
+- **Design built into the language** instead of bolted on through CSS or widget APIs
+- **Compiler diagnostics for agents** with error suppression and fix confidence
+- **Security types by default** for secrets, tokens, URLs, emails, and sanitized content
 
 ```
 app TodoApp
@@ -48,69 +65,35 @@ app TodoApp
       todos = todos.remove(todo)
 ```
 
-**This compiles to native SwiftUI, Jetpack Compose, and HTML/CSS/JS** — from a single source file. Not through a shared runtime. Not through a webview. Through platform-native code generation.
+**That file compiles to native SwiftUI, Jetpack Compose, and HTML/CSS/JS** from a single source file. No shared runtime. No webview. No style framework duct-taped on later.
 
 ---
 
-## The Problem
+## Why Aura Exists
 
-Every day, AI coding agents generate millions of lines of code in Python, TypeScript, Swift, and Kotlin. But these languages were designed in the 1990s-2010s for **human developers** typing on keyboards. They were never optimized for the way AI actually works.
+AI coding agents are fast. Modern app stacks are not.
 
-The result:
+Most UI stacks force agents to spend tokens and retries on framework glue before they can even express the product:
 
-- **AI generates 200 tokens of boilerplate** before writing a single line of business logic
-- **One typo produces 47 cascading errors**, and the AI tries to fix all 47 instead of the one root cause
-- **Cross-platform means 3 separate codebases** with 3 different UI frameworks
-- **Design is a separate skill** requiring CSS, Tailwind, or platform-specific styling knowledge
-- **Security vulnerabilities slip through** because type systems don't prevent them
+- **Too much boilerplate** before the first line of product logic
+- **Cascading diagnostics** from one small mistake
+- **Separate platform stacks** for web, iOS, and Android
+- **Design split across another language** or another abstraction layer
+- **Security left to conventions** instead of types and compiler checks
 
-Aura fixes all of this.
+Aura gives the model a smaller target, clearer semantics, and a more reliable path from prompt to working app.
 
----
+## Why It Wins
 
-## Aura vs. The World
-
-### vs. TypeScript + React Native
-
-| | TypeScript + React Native | Aura |
+| | Typical stack | Aura |
 |---|---|---|
-| **Lines for a todo app** | ~150 (component + state + styles + types) | **~35** |
-| **Token count** (LLM cost) | ~2,400 tokens | **~600 tokens** (75% less) |
-| **Files needed** | 5+ (component, styles, types, navigation, store) | **1** |
-| **First-compile success rate** (AI-generated) | ~60% | **~95%** |
-| **Error on typo** | 1 error + 5 cascading type errors | **1 error** + "did you mean?" |
-| **Cross-platform** | Shared runtime, not truly native | **Native codegen** per platform |
-| **Design system** | Import Tailwind/styled-components | **Built into grammar** |
-| **Password stored as string?** | Yes (runtime check, optional) | **Compile error** |
-
-### vs. Swift + SwiftUI
-
-| | Swift + SwiftUI | Aura |
-|---|---|---|
-| **Platforms** | Apple only | **Web + iOS + Android + Windows** |
-| **State management** | @State, @ObservedObject, @EnvironmentObject... | **`state x: int = 0`** |
-| **Design tokens** | Custom ViewModifiers, asset catalogs | **`.accent .bold .rounded`** |
-| **AI error recovery** | Standard Swift errors | **Error poisoning + confidence-scored fixes** |
-| **Learning curve** | Protocol-oriented, generics, opaque types | **Reads like pseudocode** |
-
-### vs. Kotlin + Jetpack Compose
-
-| | Kotlin + Compose | Aura |
-|---|---|---|
-| **Platforms** | Android (+KMP for iOS, experimental) | **Web + iOS + Android** |
-| **Boilerplate** | @Composable, remember, mutableStateOf | **`state x: int = 0`** |
-| **Build time** | Gradle (minutes) | **Sub-second** |
-| **Null safety** | `?.` chains everywhere | **`optional[T]` with compiler-enforced checks** |
-
-### vs. Flutter / Dart
-
-| | Flutter | Aura |
-|---|---|---|
-| **Output** | Skia canvas (custom rendering) | **Native UI per platform** |
-| **Look & feel** | Flutter widgets (not platform-native) | **SwiftUI on iOS, Compose on Android** |
-| **Hot reload** | Yes | **Yes** (`aura run`) |
-| **Widget tree** | `Widget(child: Widget(child: Widget(...)))` | **Indentation-based, no nesting hell** |
-| **Design** | ThemeData + custom widgets | **First-class design tokens** |
+| **Simple app size** | Multiple files and framework glue | **One compact source file** |
+| **Cross-platform output** | Separate stacks or shared runtime | **Native codegen per platform** |
+| **Design system** | CSS, Tailwind, modifiers, or theme APIs | **Built into the grammar** |
+| **Error recovery** | Text diagnostics and cascades | **Suppressed cascades + fix suggestions** |
+| **Security model** | Lint rules and runtime checks | **Compile-time security types** |
+| **AI token cost** | High | **Much lower on UI-heavy tasks** |
+| **Readability** | Framework-specific ceremony | **Close to product intent** |
 
 ---
 
@@ -123,7 +106,7 @@ This is the single biggest improvement for AI coding agents.
 In every other language, one typo produces a cascade of errors:
 
 ```
-// TypeScript: 1 typo → 5 errors
+// TypeScript: 1 typo -> 5 errors
 error TS2304: Cannot find name 'todoos'          ← root cause
 error TS2345: Argument of type 'never' not...     ← cascade
 error TS2339: Property 'done' does not exist...   ← cascade
@@ -134,7 +117,7 @@ error TS7006: Parameter 'todo' implicitly has...  ← cascade
 The AI sees 5 errors and tries to fix all 5. It makes 4 wrong changes that break more things.
 
 ```
-// Aura: 1 typo → 1 error
+// Aura: 1 typo -> 1 error
 error[E0103]: unknown variable 'todoos'
   fix: replace with 'todos' (confidence: 0.97)
   suppressed: 4 downstream errors
@@ -199,12 +182,12 @@ if password == "test"                // E0203: secret in == comparison
 log(user.api_key)                    // E0201: token in log output
 ```
 
-In TypeScript, you'd need ESLint rules that developers can disable. In Aura, it's **impossible to write insecure code** — the compiler prevents it.
+In TypeScript, you'd need ESLint rules that developers can disable. In Aura, it's **impossible to write insecure code** because the compiler prevents it.
 
 ### 4. One File, Three Native Platforms
 
 ```bash
-$ aura build app.aura --target all
+$ aura build --target all
 
   build/web/index.html       # Reactive HTML/CSS/JS
   build/ios/AppName.swift    # SwiftUI with @State, NavigationStack
@@ -290,9 +273,9 @@ $ aura sketch "todo app with dark mode and swipe to delete"
 Instantly generates a complete, compilable `.aura` file with models, state, views, actions, and design tokens. 10 built-in templates: todo, counter, chat, weather, notes, profile, timer, settings, gallery, login.
 
 ```bash
-$ aura sketch "chat messenger app"    # → Full chat UI with messages, input, timestamps
-$ aura sketch "weather forecast"      # → Weather display with icons, forecast grid
-$ aura sketch "login screen"          # → Auth form with email/password, security types
+$ aura sketch "chat messenger app"    # Full chat UI with messages, input, timestamps
+$ aura sketch "weather forecast"      # Weather display with icons, forecast grid
+$ aura sketch "login screen"          # Auth form with email/password, security types
 ```
 
 Every generated file compiles and runs immediately.
@@ -301,7 +284,7 @@ Every generated file compiles and runs immediately.
 
 ## Live Case Studies
 
-**[View all case studies →](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app)**
+**[See all case studies](https://apps-9fdnzbeqa-100rabhkrs-projects.vercel.app)**
 
 Six apps generated with `aura sketch` and compiled with `aura build --target web`:
 
@@ -317,7 +300,7 @@ Six apps generated with `aura sketch` and compiled with `aura build --target web
 Every app above was:
 1. Generated from a single English sentence by `aura sketch`
 2. Compiled to HTML/CSS/JS by `aura build --target web`
-3. Deployed as-is — no manual edits
+3. Deployed as-is with no manual edits
 
 ---
 
@@ -345,7 +328,7 @@ cd aura && cargo build --release
 
 # Or scaffold a new project
 ./target/release/aura init myapp
-cd myapp && ../target/release/aura build src/main.aura --target web
+cd myapp && ../target/release/aura run
 ```
 
 ---
@@ -354,15 +337,15 @@ cd myapp && ../target/release/aura build src/main.aura --target web
 
 | Command | Description |
 |---|---|
-| `aura build file.aura --target web` | Compile to reactive HTML/CSS/JS |
-| `aura build file.aura --target ios` | Compile to SwiftUI |
-| `aura build file.aura --target android` | Compile to Jetpack Compose |
-| `aura build file.aura --target all` | All three platforms |
-| `aura build file.aura --format json` | JSON error output for AI agents |
+| `aura build --target web` | Compile the current Aura project to reactive HTML/CSS/JS |
+| `aura build --target ios` | Compile the current Aura project to SwiftUI |
+| `aura build --target android` | Compile the current Aura project to Jetpack Compose |
+| `aura build --target all` | Build the current Aura project for all three platforms |
+| `aura build path/to/file.aura --format json` | JSON error output for AI agents |
 | `aura run` | Dev server on localhost:3000 |
 | `aura sketch "description"` | Generate .aura from English |
 | `aura init myapp` | Scaffold new project |
-| `aura fmt file.aura` | Format source code |
+| `aura fmt` | Format all Aura files in the current project |
 | `aura explain file.aura` | Code to plain English |
 | `aura diff a.aura b.aura` | Semantic diff |
 | `aura doctor` | Check environment |
@@ -490,7 +473,7 @@ Aura compiles to **3 native platforms simultaneously** in microseconds:
 | Counter App | 29 us | 4 us | 8 us | 71 us | **112 us** |
 | Todo List | 39 us | 11 us | 6 us | 56 us | **112 us** |
 
-**100% first-compile success rate** — zero parse errors across all benchmarks.
+**100% first-compile success rate** with zero parse errors across all benchmarks.
 
 ### Code Size: Aura vs. Everyone Else
 
@@ -560,7 +543,7 @@ Aura is open source under the MIT license. We welcome contributions.
 1. Read the [language specification](spec/language.md)
 2. Look at the [examples](examples/)
 3. Run `aura doctor` to check your environment
-4. Run `cargo test` — all 120 tests should pass
+4. Run `cargo test`. All 120 tests should pass.
 5. Pick an issue or propose a feature
 
 ---

@@ -13,10 +13,11 @@
 //! 7. Run semantic analysis on the merged program
 //! 8. Build HIR from the merged result
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use crate::ast::*;
+use crate::config::AuraConfig;
 use crate::errors::{AuraError, ErrorCode, Severity};
 use crate::lexer::Span;
 
@@ -24,6 +25,8 @@ use crate::lexer::Span;
 pub struct Project {
     /// The project root directory.
     pub root: PathBuf,
+    /// Parsed aura.toml config (if present).
+    pub config: Option<AuraConfig>,
     /// All source files discovered.
     pub files: Vec<SourceFile>,
     /// The merged program (all files combined into one AST).
@@ -73,6 +76,9 @@ pub struct ResolvedImport {
 pub fn load_project(root: &Path) -> Project {
     let mut errors = Vec::new();
 
+    // Load aura.toml config
+    let config = AuraConfig::load(root);
+
     // Find the source directory
     let src_dir = if root.join("src").is_dir() {
         root.join("src")
@@ -95,6 +101,7 @@ pub fn load_project(root: &Path) -> Project {
         ));
         return Project {
             root: root.to_path_buf(),
+            config: config.clone(),
             files: Vec::new(),
             program: Program {
                 imports: Vec::new(),
@@ -152,11 +159,15 @@ pub fn load_project(root: &Path) -> Project {
         });
     }
 
+    // Detect circular imports
+    detect_circular_imports(&source_files, &mut errors);
+
     // Merge all files into a single program
     let program = merge_programs(&source_files, &mut errors);
 
     Project {
         root: root.to_path_buf(),
+        config,
         files: source_files,
         program,
         errors,
@@ -178,8 +189,10 @@ pub fn load_single_file(file: &Path) -> Project {
         },
     });
 
+    let project_root = file.parent().unwrap_or(Path::new("."));
     Project {
-        root: file.parent().unwrap_or(Path::new(".")).to_path_buf(),
+        root: project_root.to_path_buf(),
+        config: AuraConfig::load(project_root),
         files: vec![SourceFile {
             path: file.to_string_lossy().to_string(),
             abs_path: file.to_path_buf(),
@@ -244,34 +257,33 @@ fn resolve_imports(
                 ImportSpec::Wildcard(alias) => vec![alias.clone()],
             };
 
-            let resolved_path = if import.source.starts_with("./")
-                || import.source.starts_with("../")
-            {
-                // Relative import
-                let target = current_dir.join(&import.source).with_extension("aura");
-                if target.exists() {
-                    Some(target.to_string_lossy().to_string())
+            let resolved_path =
+                if import.source.starts_with("./") || import.source.starts_with("../") {
+                    // Relative import
+                    let target = current_dir.join(&import.source).with_extension("aura");
+                    if target.exists() {
+                        Some(target.to_string_lossy().to_string())
+                    } else {
+                        // Try without adding extension (maybe source already has it)
+                        let target2 = current_dir.join(&import.source);
+                        if target2.exists() {
+                            Some(target2.to_string_lossy().to_string())
+                        } else {
+                            None
+                        }
+                    }
+                } else if import.source.starts_with('@') {
+                    // Package import — not resolved yet (future: package manager)
+                    None
                 } else {
-                    // Try without adding extension (maybe source already has it)
-                    let target2 = current_dir.join(&import.source);
-                    if target2.exists() {
-                        Some(target2.to_string_lossy().to_string())
+                    // Bare import — look in src/
+                    let target = src_dir.join(&import.source).with_extension("aura");
+                    if target.exists() {
+                        Some(target.to_string_lossy().to_string())
                     } else {
                         None
                     }
-                }
-            } else if import.source.starts_with('@') {
-                // Package import — not resolved yet (future: package manager)
-                None
-            } else {
-                // Bare import — look in src/
-                let target = src_dir.join(&import.source).with_extension("aura");
-                if target.exists() {
-                    Some(target.to_string_lossy().to_string())
-                } else {
-                    None
-                }
-            };
+                };
 
             ResolvedImport {
                 source: import.source.clone(),
@@ -370,6 +382,87 @@ fn merge_programs(files: &[SourceFile], errors: &mut Vec<AuraError>) -> Program 
 }
 
 /// Extract the name of an app member for duplicate detection.
+/// Detect circular imports in the file graph.
+fn detect_circular_imports(files: &[SourceFile], errors: &mut Vec<AuraError>) {
+    // Build adjacency list
+    let path_set: HashSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
+
+    for file in files {
+        for import in &file.imports {
+            if let Some(ref resolved) = import.resolved_path {
+                // Check if the imported file imports us back (direct cycle)
+                if let Some(target_file) = files
+                    .iter()
+                    .find(|f| f.abs_path.to_string_lossy() == *resolved)
+                {
+                    for target_import in &target_file.imports {
+                        if let Some(ref target_resolved) = target_import.resolved_path {
+                            if target_resolved == &file.abs_path.to_string_lossy().to_string() {
+                                errors.push(AuraError::new(
+                                    ErrorCode::E0107,
+                                    Severity::Error,
+                                    format!(
+                                        "Circular import detected: {} ↔ {}",
+                                        file.path, target_file.path
+                                    ),
+                                    Span::new(0, 0),
+                                ));
+                            }
+                        }
+                    }
+                }
+            } else if !import.source.starts_with('@') {
+                // Unresolved local import → error
+                errors.push(
+                    AuraError::new(
+                        ErrorCode::E0104,
+                        Severity::Error,
+                        format!(
+                            "Cannot resolve import '{}' from {}",
+                            import.source, file.path
+                        ),
+                        Span::new(0, 0),
+                    )
+                    .with_help(format!(
+                        "Create the file at {}.aura",
+                        import.source.trim_start_matches("./")
+                    )),
+                );
+            }
+        }
+    }
+}
+
+// === Stable Handoff APIs for Engineer 2 ===
+
+/// Analyze a loaded project — returns diagnostics.
+pub fn analyze_project(project: &Project) -> Vec<AuraError> {
+    let analysis = crate::semantic::SemanticAnalyzer::new().analyze(&project.program);
+    analysis.errors
+}
+
+/// Build HIR for a loaded project.
+pub fn build_hir_for_project(project: &Project) -> crate::hir::HIRModule {
+    crate::hir::build_hir(&project.program)
+}
+
+/// Check if a project needs rebuilding (incremental).
+pub fn check_incremental(project: &Project) -> crate::cache::CacheCheck {
+    let manifest = crate::cache::BuildManifest::load(&project.root)
+        .unwrap_or_else(crate::cache::BuildManifest::new);
+
+    let file_hashes: Vec<(String, String)> = project
+        .files
+        .iter()
+        .filter_map(|f| {
+            let content = std::fs::read_to_string(&f.abs_path).ok()?;
+            Some((f.path.clone(), crate::cache::hash_source(&content)))
+        })
+        .collect();
+
+    manifest.check(&file_hashes)
+}
+
 fn member_name(member: &AppMember) -> String {
     match member {
         AppMember::Model(m) => format!("model:{}", m.name),
@@ -394,10 +487,7 @@ mod tests {
     fn test_path_to_module_name() {
         assert_eq!(path_to_module_name("src/models/todo.aura"), "models.todo");
         assert_eq!(path_to_module_name("src/main.aura"), "main");
-        assert_eq!(
-            path_to_module_name("src/screens/home.aura"),
-            "screens.home"
-        );
+        assert_eq!(path_to_module_name("src/screens/home.aura"), "screens.home");
     }
 
     #[test]

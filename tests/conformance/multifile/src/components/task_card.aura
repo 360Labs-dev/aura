@@ -1,0 +1,9 @@
+app Components
+  component TaskCard(task: Task)
+    view
+      row gap.md align.center padding.md .surface .rounded
+        checkbox task.done
+        column gap.xs
+          text task.title strike: task.done
+        spacer
+        button.icon "trash" .danger -> deleteTask(task)

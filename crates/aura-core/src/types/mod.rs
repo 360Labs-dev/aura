@@ -149,7 +149,11 @@ impl AuraType {
             AuraType::Named(name) => name.clone(),
             AuraType::Function(ft) => {
                 let params: Vec<_> = ft.params.iter().map(|p| p.display_name()).collect();
-                format!("fn({}) -> {}", params.join(", "), ft.return_type.display_name())
+                format!(
+                    "fn({}) -> {}",
+                    params.join(", "),
+                    ft.return_type.display_name()
+                )
             }
             AuraType::Action(params) => {
                 if params.is_empty() {
@@ -164,7 +168,12 @@ impl AuraType {
                 parts.join(" | ")
             }
             AuraType::TypeParam(name) => name.clone(),
-            AuraType::Conditional { check, extends, then_type, else_type } => {
+            AuraType::Conditional {
+                check,
+                extends,
+                then_type,
+                else_type,
+            } => {
                 format!(
                     "{} extends {} ? {} : {}",
                     check.display_name(),
@@ -191,8 +200,14 @@ mod tests {
 
     #[test]
     fn test_display_names() {
-        assert_eq!(AuraType::Primitive(PrimitiveType::Text).display_name(), "text");
-        assert_eq!(AuraType::Security(SecurityType::Secret).display_name(), "secret");
+        assert_eq!(
+            AuraType::Primitive(PrimitiveType::Text).display_name(),
+            "text"
+        );
+        assert_eq!(
+            AuraType::Security(SecurityType::Secret).display_name(),
+            "secret"
+        );
         assert_eq!(
             AuraType::List(Box::new(AuraType::Named("Todo".to_string()))).display_name(),
             "list[Todo]"

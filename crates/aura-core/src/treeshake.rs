@@ -173,9 +173,13 @@ fn collect_stmt_refs(stmt: &HIRStmt, refs: &mut HashSet<String>) {
         }
         HIRStmt::If(cond, then_body, else_body) => {
             collect_expr_refs(cond, refs);
-            for s in then_body { collect_stmt_refs(s, refs); }
+            for s in then_body {
+                collect_stmt_refs(s, refs);
+            }
             if let Some(else_stmts) = else_body {
-                for s in else_stmts { collect_stmt_refs(s, refs); }
+                for s in else_stmts {
+                    collect_stmt_refs(s, refs);
+                }
             }
         }
         _ => {}
@@ -187,15 +191,21 @@ fn collect_expr_refs(expr: &HIRExpr, refs: &mut HashSet<String>) {
     match expr {
         HIRExpr::Constructor(name, args, _) => {
             refs.insert(name.clone());
-            for (_, v) in args { collect_expr_refs(v, refs); }
+            for (_, v) in args {
+                collect_expr_refs(v, refs);
+            }
         }
         HIRExpr::Call(func, args, _) => {
             collect_expr_refs(func, refs);
-            for a in args { collect_expr_refs(a, refs); }
+            for a in args {
+                collect_expr_refs(a, refs);
+            }
         }
         HIRExpr::NamedCall(func, args, _) => {
             collect_expr_refs(func, refs);
-            for (_, v) in args { collect_expr_refs(v, refs); }
+            for (_, v) in args {
+                collect_expr_refs(v, refs);
+            }
         }
         HIRExpr::MemberAccess(obj, _, _) => {
             collect_expr_refs(obj, refs);

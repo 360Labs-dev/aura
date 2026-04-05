@@ -42,6 +42,9 @@ clap = { version = "4", features = ["derive"] }
 strsim = "0.11"       # Edit distance for "did you mean?"
 unicode-normalization = "0.1"
 
+# Config parsing
+toml = "0.8"
+
 # File watching
 notify = "7"
 

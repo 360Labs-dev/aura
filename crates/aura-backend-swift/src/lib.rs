@@ -17,4 +17,4 @@
 
 mod codegen;
 
-pub use codegen::{compile_to_swift, SwiftOutput};
+pub use codegen::{SwiftOutput, compile_to_swift};

@@ -177,7 +177,11 @@ impl std::fmt::Display for ErrorCode {
 }
 
 /// Compute edit distance between two strings for "did you mean?" suggestions.
-pub fn suggest_similar<'a>(name: &str, candidates: &[&'a str], max_distance: usize) -> Option<(&'a str, f64)> {
+pub fn suggest_similar<'a>(
+    name: &str,
+    candidates: &[&'a str],
+    max_distance: usize,
+) -> Option<(&'a str, f64)> {
     let mut best: Option<(&str, usize)> = None;
 
     for &candidate in candidates {
@@ -227,6 +231,10 @@ mod tests {
     fn test_confidence_scoring() {
         let result = suggest_similar("todoos", &["todos"], 2);
         let (_, confidence) = result.unwrap();
-        assert!(confidence > 0.7, "Expected confidence > 0.7, got {}", confidence);
+        assert!(
+            confidence > 0.7,
+            "Expected confidence > 0.7, got {}",
+            confidence
+        );
     }
 }

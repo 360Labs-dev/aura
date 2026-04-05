@@ -22,7 +22,10 @@ impl AgentServer {
             "sketch" => self.handle_sketch(&request.id, &request.params),
             "hover" => self.handle_hover(&request.id, &request.params),
             "goto.definition" => self.handle_goto_definition(&request.id, &request.params),
-            "ping" => Response::success(request.id.clone(), json!({ "status": "ok", "version": env!("CARGO_PKG_VERSION") })),
+            "ping" => Response::success(
+                request.id.clone(),
+                json!({ "status": "ok", "version": env!("CARGO_PKG_VERSION") }),
+            ),
             _ => Response::error(
                 request.id.clone(),
                 -32601,
@@ -36,11 +39,7 @@ impl AgentServer {
         let request: Request = match serde_json::from_str(input) {
             Ok(r) => r,
             Err(e) => {
-                let resp = Response::error(
-                    json!(null),
-                    -32700,
-                    format!("Parse error: {}", e),
-                );
+                let resp = Response::error(json!(null), -32700, format!("Parse error: {}", e));
                 return serde_json::to_string(&resp).unwrap();
             }
         };
@@ -54,7 +53,13 @@ impl AgentServer {
     fn handle_ast_get(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
         let source = match params.get("source").and_then(|s| s.as_str()) {
             Some(s) => s,
-            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+            None => {
+                return Response::error(
+                    id.clone(),
+                    -32602,
+                    "Missing 'source' parameter".to_string(),
+                );
+            }
         };
 
         let result = aura_core::parser::parse(source);
@@ -82,7 +87,13 @@ impl AgentServer {
     fn handle_diagnostics(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
         let source = match params.get("source").and_then(|s| s.as_str()) {
             Some(s) => s,
-            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+            None => {
+                return Response::error(
+                    id.clone(),
+                    -32602,
+                    "Missing 'source' parameter".to_string(),
+                );
+            }
         };
 
         let parse_result = aura_core::parser::parse(source);
@@ -122,7 +133,10 @@ impl AgentServer {
             .collect();
 
         let error_count = diagnostics.iter().filter(|d| d.severity == "error").count();
-        let warning_count = diagnostics.iter().filter(|d| d.severity == "warning").count();
+        let warning_count = diagnostics
+            .iter()
+            .filter(|d| d.severity == "warning")
+            .count();
 
         Response::success(
             id.clone(),
@@ -139,7 +153,10 @@ impl AgentServer {
 
     fn handle_completions(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
         let _source = params.get("source").and_then(|s| s.as_str()).unwrap_or("");
-        let context = params.get("context").and_then(|s| s.as_str()).unwrap_or("view");
+        let context = params
+            .get("context")
+            .and_then(|s| s.as_str())
+            .unwrap_or("view");
 
         let mut completions: Vec<AgentCompletion> = Vec::new();
 
@@ -154,7 +171,17 @@ impl AgentServer {
                     });
                 }
                 // Color tokens
-                for t in &["accent", "primary", "secondary", "muted", "danger", "warning", "success", "info", "surface"] {
+                for t in &[
+                    "accent",
+                    "primary",
+                    "secondary",
+                    "muted",
+                    "danger",
+                    "warning",
+                    "success",
+                    "info",
+                    "surface",
+                ] {
                     completions.push(AgentCompletion {
                         label: format!(".{}", t),
                         kind: "color".to_string(),
@@ -162,7 +189,15 @@ impl AgentServer {
                     });
                 }
                 // Typography tokens
-                for t in &["bold", "medium", "semibold", "italic", "mono", "center", "uppercase"] {
+                for t in &[
+                    "bold",
+                    "medium",
+                    "semibold",
+                    "italic",
+                    "mono",
+                    "center",
+                    "uppercase",
+                ] {
                     completions.push(AgentCompletion {
                         label: format!(".{}", t),
                         kind: "typography".to_string(),
@@ -189,9 +224,25 @@ impl AgentServer {
                 }
             }
             "type" => {
-                for t in &["text", "int", "float", "bool", "timestamp", "duration", "percent",
-                           "secret", "sanitized", "email", "url", "token",
-                           "list", "map", "set", "optional", "enum"] {
+                for t in &[
+                    "text",
+                    "int",
+                    "float",
+                    "bool",
+                    "timestamp",
+                    "duration",
+                    "percent",
+                    "secret",
+                    "sanitized",
+                    "email",
+                    "url",
+                    "token",
+                    "list",
+                    "map",
+                    "set",
+                    "optional",
+                    "enum",
+                ] {
                     completions.push(AgentCompletion {
                         label: t.to_string(),
                         kind: "type".to_string(),
@@ -201,15 +252,24 @@ impl AgentServer {
             }
             "view_element" => {
                 for (elem, desc) in &[
-                    ("column", "Vertical layout"), ("row", "Horizontal layout"),
-                    ("stack", "Layered stack"), ("grid", "Grid layout"),
-                    ("scroll", "Scrollable container"), ("text", "Text display"),
-                    ("heading", "Heading text"), ("button", "Interactive button"),
-                    ("textfield", "Text input"), ("checkbox", "Checkbox"),
-                    ("toggle", "Toggle switch"), ("slider", "Value slider"),
-                    ("image", "Image display"), ("icon", "Icon display"),
-                    ("spacer", "Flexible space"), ("divider", "Separator line"),
-                    ("if", "Conditional view"), ("each", "Loop over list"),
+                    ("column", "Vertical layout"),
+                    ("row", "Horizontal layout"),
+                    ("stack", "Layered stack"),
+                    ("grid", "Grid layout"),
+                    ("scroll", "Scrollable container"),
+                    ("text", "Text display"),
+                    ("heading", "Heading text"),
+                    ("button", "Interactive button"),
+                    ("textfield", "Text input"),
+                    ("checkbox", "Checkbox"),
+                    ("toggle", "Toggle switch"),
+                    ("slider", "Value slider"),
+                    ("image", "Image display"),
+                    ("icon", "Icon display"),
+                    ("spacer", "Flexible space"),
+                    ("divider", "Separator line"),
+                    ("if", "Conditional view"),
+                    ("each", "Loop over list"),
                     ("when", "Pattern match"),
                 ] {
                     completions.push(AgentCompletion {
@@ -228,7 +288,13 @@ impl AgentServer {
     fn handle_hir_get(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
         let source = match params.get("source").and_then(|s| s.as_str()) {
             Some(s) => s,
-            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+            None => {
+                return Response::error(
+                    id.clone(),
+                    -32602,
+                    "Missing 'source' parameter".to_string(),
+                );
+            }
         };
 
         let result = aura_core::parser::parse(source);
@@ -270,7 +336,13 @@ impl AgentServer {
     fn handle_explain(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
         let source = match params.get("source").and_then(|s| s.as_str()) {
             Some(s) => s,
-            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+            None => {
+                return Response::error(
+                    id.clone(),
+                    -32602,
+                    "Missing 'source' parameter".to_string(),
+                );
+            }
         };
 
         let result = aura_core::parser::parse(source);
@@ -286,7 +358,13 @@ impl AgentServer {
     fn handle_sketch(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
         let description = match params.get("description").and_then(|s| s.as_str()) {
             Some(s) => s,
-            None => return Response::error(id.clone(), -32602, "Missing 'description' parameter".to_string()),
+            None => {
+                return Response::error(
+                    id.clone(),
+                    -32602,
+                    "Missing 'description' parameter".to_string(),
+                );
+            }
         };
 
         let code = aura_core::sketch::sketch(description);
@@ -296,7 +374,13 @@ impl AgentServer {
     fn handle_hover(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
         let source = match params.get("source").and_then(|s| s.as_str()) {
             Some(s) => s,
-            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+            None => {
+                return Response::error(
+                    id.clone(),
+                    -32602,
+                    "Missing 'source' parameter".to_string(),
+                );
+            }
         };
         let line = params.get("line").and_then(|l| l.as_u64()).unwrap_or(1) as usize;
         let column = params.get("column").and_then(|c| c.as_u64()).unwrap_or(1) as usize;
@@ -316,7 +400,8 @@ impl AgentServer {
             for token in &lex_result.tokens {
                 if token.span.start <= byte_offset && byte_offset < token.span.end {
                     match &token.value {
-                        aura_core::lexer::Token::Ident(name) | aura_core::lexer::Token::TypeIdent(name) => {
+                        aura_core::lexer::Token::Ident(name)
+                        | aura_core::lexer::Token::TypeIdent(name) => {
                             // Look up in symbol table
                             if let Some(sym) = analysis.symbols.lookup(0, name) {
                                 hover_info = Some(json!({
@@ -365,10 +450,20 @@ impl AgentServer {
         }
     }
 
-    fn handle_goto_definition(&self, id: &serde_json::Value, params: &serde_json::Value) -> Response {
+    fn handle_goto_definition(
+        &self,
+        id: &serde_json::Value,
+        params: &serde_json::Value,
+    ) -> Response {
         let source = match params.get("source").and_then(|s| s.as_str()) {
             Some(s) => s,
-            None => return Response::error(id.clone(), -32602, "Missing 'source' parameter".to_string()),
+            None => {
+                return Response::error(
+                    id.clone(),
+                    -32602,
+                    "Missing 'source' parameter".to_string(),
+                );
+            }
         };
         let line = params.get("line").and_then(|l| l.as_u64()).unwrap_or(1) as usize;
         let column = params.get("column").and_then(|c| c.as_u64()).unwrap_or(1) as usize;
@@ -382,17 +477,22 @@ impl AgentServer {
             let lex_result = aura_core::lexer::lex(source);
             for token in &lex_result.tokens {
                 if token.span.start <= byte_offset && byte_offset < token.span.end {
-                    if let aura_core::lexer::Token::Ident(name) | aura_core::lexer::Token::TypeIdent(name) = &token.value {
+                    if let aura_core::lexer::Token::Ident(name)
+                    | aura_core::lexer::Token::TypeIdent(name) = &token.value
+                    {
                         if let Some(sym) = analysis.symbols.lookup(0, name) {
                             let (def_line, def_col) = byte_to_line_col(source, sym.span.start);
-                            return Response::success(id.clone(), json!({
-                                "definition": {
-                                    "name": name,
-                                    "line": def_line,
-                                    "column": def_col,
-                                    "kind": format!("{:?}", sym.kind),
-                                }
-                            }));
+                            return Response::success(
+                                id.clone(),
+                                json!({
+                                    "definition": {
+                                        "name": name,
+                                        "line": def_line,
+                                        "column": def_col,
+                                        "kind": format!("{:?}", sym.kind),
+                                    }
+                                }),
+                            );
                         }
                     }
                     break;
@@ -413,7 +513,12 @@ fn line_col_to_byte(source: &str, target_line: usize, target_col: usize) -> usiz
         if line == target_line && col == target_col {
             return i;
         }
-        if ch == '\n' { line += 1; col = 1; } else { col += 1; }
+        if ch == '\n' {
+            line += 1;
+            col = 1;
+        } else {
+            col += 1;
+        }
     }
     source.len()
 }
@@ -422,8 +527,15 @@ fn byte_to_line_col(source: &str, byte_offset: usize) -> (usize, usize) {
     let mut line = 1;
     let mut col = 1;
     for (i, ch) in source.char_indices() {
-        if i >= byte_offset { break; }
-        if ch == '\n' { line += 1; col = 1; } else { col += 1; }
+        if i >= byte_offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            col = 1;
+        } else {
+            col += 1;
+        }
     }
     (line, col)
 }
@@ -453,26 +565,35 @@ mod tests {
 
     #[test]
     fn test_ast_get() {
-        let result = call("ast.get", json!({
-            "source": "app Hello\n  screen Main\n    view\n      text \"Hi\""
-        }));
+        let result = call(
+            "ast.get",
+            json!({
+                "source": "app Hello\n  screen Main\n    view\n      text \"Hi\""
+            }),
+        );
         assert_eq!(result["app"]["name"], "Hello");
         assert_eq!(result["parse_errors"], 0);
     }
 
     #[test]
     fn test_diagnostics_clean() {
-        let result = call("diagnostics.get", json!({
-            "source": "app Test\n  screen Main\n    view\n      text \"Hi\""
-        }));
+        let result = call(
+            "diagnostics.get",
+            json!({
+                "source": "app Test\n  screen Main\n    view\n      text \"Hi\""
+            }),
+        );
         assert_eq!(result["summary"]["errors"], 0);
     }
 
     #[test]
     fn test_diagnostics_with_errors() {
-        let result = call("diagnostics.get", json!({
-            "source": "app Test\n  screen Main\n    state x: int = 0\n    view\n      text \"Hi\"\n    action test\n      unknownVar = 1"
-        }));
+        let result = call(
+            "diagnostics.get",
+            json!({
+                "source": "app Test\n  screen Main\n    state x: int = 0\n    view\n      text \"Hi\"\n    action test\n      unknownVar = 1"
+            }),
+        );
         let diagnostics = result["diagnostics"].as_array().unwrap();
         assert!(!diagnostics.is_empty());
         // Should have fix suggestion with confidence
@@ -482,11 +603,17 @@ mod tests {
 
     #[test]
     fn test_diagnostics_with_fix_confidence() {
-        let result = call("diagnostics.get", json!({
-            "source": "app Test\n  screen Main\n    state todos: list[text] = []\n    view\n      text \"Hi\"\n    action test\n      todoos = []"
-        }));
+        let result = call(
+            "diagnostics.get",
+            json!({
+                "source": "app Test\n  screen Main\n    state todos: list[text] = []\n    view\n      text \"Hi\"\n    action test\n      todoos = []"
+            }),
+        );
         let diagnostics = result["diagnostics"].as_array().unwrap();
-        let type_errs: Vec<_> = diagnostics.iter().filter(|d| d["code"] == "E0103").collect();
+        let type_errs: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d["code"] == "E0103")
+            .collect();
         assert!(!type_errs.is_empty(), "Expected E0103");
         let fix = &type_errs[0]["fix"];
         assert!(fix.is_object(), "Expected fix suggestion");
@@ -496,12 +623,18 @@ mod tests {
 
     #[test]
     fn test_completions_design_tokens() {
-        let result = call("completions.get", json!({
-            "context": "design_token"
-        }));
+        let result = call(
+            "completions.get",
+            json!({
+                "context": "design_token"
+            }),
+        );
         let completions = result["completions"].as_array().unwrap();
         assert!(completions.len() > 20);
-        let labels: Vec<&str> = completions.iter().map(|c| c["label"].as_str().unwrap()).collect();
+        let labels: Vec<&str> = completions
+            .iter()
+            .map(|c| c["label"].as_str().unwrap())
+            .collect();
         assert!(labels.contains(&".accent"));
         assert!(labels.contains(&".bold"));
         assert!(labels.contains(&"gap.md"));
@@ -509,11 +642,17 @@ mod tests {
 
     #[test]
     fn test_completions_view_elements() {
-        let result = call("completions.get", json!({
-            "context": "view_element"
-        }));
+        let result = call(
+            "completions.get",
+            json!({
+                "context": "view_element"
+            }),
+        );
         let completions = result["completions"].as_array().unwrap();
-        let labels: Vec<&str> = completions.iter().map(|c| c["label"].as_str().unwrap()).collect();
+        let labels: Vec<&str> = completions
+            .iter()
+            .map(|c| c["label"].as_str().unwrap())
+            .collect();
         assert!(labels.contains(&"column"));
         assert!(labels.contains(&"button"));
         assert!(labels.contains(&"textfield"));
@@ -521,9 +660,12 @@ mod tests {
 
     #[test]
     fn test_hir_get() {
-        let result = call("hir.get", json!({
-            "source": "app Test\n  model Todo\n    title: text\n  screen Main\n    view\n      text \"Hi\""
-        }));
+        let result = call(
+            "hir.get",
+            json!({
+                "source": "app Test\n  model Todo\n    title: text\n  screen Main\n    view\n      text \"Hi\""
+            }),
+        );
         assert_eq!(result["app"]["name"], "Test");
         assert_eq!(result["models"][0]["name"], "Todo");
         assert_eq!(result["screens"][0]["name"], "Main");
@@ -531,18 +673,24 @@ mod tests {
 
     #[test]
     fn test_explain() {
-        let result = call("explain", json!({
-            "source": "app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\""
-        }));
+        let result = call(
+            "explain",
+            json!({
+                "source": "app Hello\n  screen Main\n    view\n      text \"Hello, Aura!\""
+            }),
+        );
         let explanation = result["explanation"].as_str().unwrap();
         assert!(explanation.contains("Hello"));
     }
 
     #[test]
     fn test_sketch() {
-        let result = call("sketch", json!({
-            "description": "counter app"
-        }));
+        let result = call(
+            "sketch",
+            json!({
+                "description": "counter app"
+            }),
+        );
         let code = result["code"].as_str().unwrap();
         assert!(code.contains("state count"));
     }

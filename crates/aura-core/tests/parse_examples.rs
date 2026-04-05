@@ -39,7 +39,10 @@ fn test_parse_weather_example() {
             eprintln!("  [{}] {}", err.code, err.message);
         }
     }
-    assert!(result.program.is_some(), "weather.aura should produce an AST");
+    assert!(
+        result.program.is_some(),
+        "weather.aura should produce an AST"
+    );
 }
 
 #[test]
@@ -61,5 +64,8 @@ fn test_parse_ecommerce_example() {
             eprintln!("  [{}] {}", err.code, err.message);
         }
     }
-    assert!(result.program.is_some(), "ecommerce.aura should produce an AST");
+    assert!(
+        result.program.is_some(),
+        "ecommerce.aura should produce an AST"
+    );
 }

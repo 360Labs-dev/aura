@@ -15,4 +15,4 @@
 
 mod codegen;
 
-pub use codegen::{compile_to_compose, ComposeOutput};
+pub use codegen::{ComposeOutput, compile_to_compose};
