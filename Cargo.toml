@@ -25,7 +25,7 @@ repository = "https://github.com/360Labs-dev/aura"
 logos = "0.15"
 
 # Parser
-chumsky = "0.10"
+chumsky = "0.12"
 
 # Error reporting
 ariadne = "0.5"
