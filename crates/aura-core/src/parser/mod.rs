@@ -1533,17 +1533,7 @@ impl Parser {
             while self.eat(&Token::Bar) {
                 types.push(self.parse_type_primary()?);
             }
-            // Represent union as a named type with " | " joined name
-            // The type checker resolves this via AuraType::Union
-            let union_name = types
-                .iter()
-                .map(|t| match t {
-                    TypeExpr::Named(n, _) => n.clone(),
-                    _ => "unknown".to_string(),
-                })
-                .collect::<Vec<_>>()
-                .join(" | ");
-            return Some(TypeExpr::Named(union_name, span));
+            return Some(TypeExpr::Union(types, span));
         }
 
         Some(first)

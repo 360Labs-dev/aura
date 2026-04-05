@@ -958,6 +958,9 @@ impl HIRBuilder {
             ast::TypeExpr::Action(params, _) => {
                 AuraType::Action(params.iter().map(|p| self.resolve_ast_type(p)).collect())
             }
+            ast::TypeExpr::Union(types, _) => {
+                AuraType::Union(types.iter().map(|t| self.resolve_ast_type(t)).collect())
+            }
         }
     }
 

@@ -108,6 +108,8 @@ pub enum TypeExpr {
     Function(Vec<TypeExpr>, Option<Box<TypeExpr>>, Span),
     /// Action: `action` or `action(text)`
     Action(Vec<TypeExpr>, Span),
+    /// Union: `text | int | bool`
+    Union(Vec<TypeExpr>, Span),
 }
 
 /// An enum variant in source.

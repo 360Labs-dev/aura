@@ -598,6 +598,10 @@ impl Formatter {
                     format!("action({})", p.join(", "))
                 }
             }
+            TypeExpr::Union(types, _) => {
+                let parts: Vec<String> = types.iter().map(|t| self.type_str(t)).collect();
+                parts.join(" | ")
+            }
         }
     }
 

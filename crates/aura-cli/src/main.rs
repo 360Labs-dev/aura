@@ -163,6 +163,8 @@ fn try_build_command(
     let context = load_project_context(path).map_err(|message| {
         eprintln!("  error: {}", message);
     })?;
+    let output_dir = resolve_output_dir(output_dir, &context);
+    let output_dir_display = output_dir.display().to_string();
 
     eprintln!();
     eprintln!("  aura build v{}", env!("CARGO_PKG_VERSION"));
@@ -231,11 +233,11 @@ fn try_build_command(
     match target {
         "web" => {
             let output = aura_backend_web::compile_to_web(&hir);
-            let out_path = Path::new(output_dir);
+            let out_path = output_dir.as_path();
             std::fs::create_dir_all(out_path).map_err(|err| {
                 eprintln!(
                     "  error: Failed to create output directory '{}': {}",
-                    output_dir, err
+                    output_dir_display, err
                 );
             })?;
 
@@ -247,25 +249,32 @@ fn try_build_command(
             eprintln!("  Build complete:");
             eprintln!(
                 "    {}/index.html  ({} bytes)",
-                output_dir,
+                output_dir_display,
                 output.html.len()
             );
             eprintln!(
                 "    {}/styles.css  ({} bytes)",
-                output_dir,
+                output_dir_display,
                 output.css.len()
             );
-            eprintln!("    {}/app.js      ({} bytes)", output_dir, output.js.len());
+            eprintln!(
+                "    {}/app.js      ({} bytes)",
+                output_dir_display,
+                output.js.len()
+            );
             eprintln!();
-            eprintln!("  Open {}/index.html in a browser to preview.", output_dir);
+            eprintln!(
+                "  Open {}/index.html in a browser to preview.",
+                output_dir_display
+            );
         }
         "ios" | "swift" => {
             let output = aura_backend_swift::compile_to_swift(&hir);
-            let out_path = Path::new(output_dir);
+            let out_path = output_dir.as_path();
             std::fs::create_dir_all(out_path).map_err(|err| {
                 eprintln!(
                     "  error: Failed to create output directory '{}': {}",
-                    output_dir, err
+                    output_dir_display, err
                 );
             })?;
 
@@ -279,18 +288,18 @@ fn try_build_command(
             eprintln!("  Build complete:");
             eprintln!(
                 "    {}/{}  ({} bytes)",
-                output_dir,
+                output_dir_display,
                 output.filename,
                 output.swift.len()
             );
         }
         "android" | "compose" => {
             let output = aura_backend_compose::compile_to_compose(&hir);
-            let out_path = Path::new(output_dir);
+            let out_path = output_dir.as_path();
             std::fs::create_dir_all(out_path).map_err(|err| {
                 eprintln!(
                     "  error: Failed to create output directory '{}': {}",
-                    output_dir, err
+                    output_dir_display, err
                 );
             })?;
 
@@ -304,13 +313,13 @@ fn try_build_command(
             eprintln!("  Build complete:");
             eprintln!(
                 "    {}/{}  ({} bytes)",
-                output_dir,
+                output_dir_display,
                 output.filename,
                 output.kotlin.len()
             );
         }
         "all" => {
-            let out_base = Path::new(output_dir);
+            let out_base = output_dir.as_path();
 
             let web_out = out_base.join("web");
             std::fs::create_dir_all(&web_out).map_err(|err| {
@@ -357,9 +366,9 @@ fn try_build_command(
 
             eprintln!();
             eprintln!("  Build complete (all platforms):");
-            eprintln!("    {}/web/         (HTML/CSS/JS)", output_dir);
-            eprintln!("    {}/ios/         (SwiftUI)", output_dir);
-            eprintln!("    {}/android/     (Jetpack Compose)", output_dir);
+            eprintln!("    {}/web/         (HTML/CSS/JS)", output_dir_display);
+            eprintln!("    {}/ios/         (SwiftUI)", output_dir_display);
+            eprintln!("    {}/android/     (Jetpack Compose)", output_dir_display);
         }
         _ => {
             eprintln!("  error: Unknown target '{}'", target);
@@ -381,6 +390,15 @@ fn write_file(path: PathBuf, content: &str, label: &str) -> Result<(), ()> {
             err
         );
     })
+}
+
+fn resolve_output_dir(output_dir: &str, context: &ProjectContext) -> PathBuf {
+    let output_path = Path::new(output_dir);
+    if output_path.is_absolute() {
+        output_path.to_path_buf()
+    } else {
+        context.project_root.join(output_path)
+    }
 }
 
 fn load_project_context(path: &str) -> Result<ProjectContext, String> {
@@ -897,7 +915,7 @@ default = "modern.light"
       column gap.lg padding.2xl align.center
         heading "{}" size.2xl .bold
         text "Edit src/main.aura, then run aura build or aura run." .secondary
-        button "Get Started" .accent .pill -> getStarted()
+        button "Get Started" .accent -> getStarted()
 
     action getStarted
       return
@@ -905,7 +923,18 @@ default = "modern.light"
             app_name, app_title
         ),
     };
-    std::fs::write(dir.join("src/main.aura"), main_aura).expect("Failed to write main.aura");
+    let formatted_main = aura_core::parser::parse(&main_aura)
+        .program
+        .and_then(|program| {
+            let formatted = aura_core::fmt::format(&program);
+            if aura_core::parser::parse(&formatted).program.is_some() {
+                Some(formatted)
+            } else {
+                None
+            }
+        })
+        .unwrap_or(main_aura);
+    std::fs::write(dir.join("src/main.aura"), formatted_main).expect("Failed to write main.aura");
 
     let readme = format!(
         "# {title}\n\nGenerated with `aura init`.\n\n## Project workflow\n\n```bash\naura run\naura build\naura build --target all\naura fmt\naura doctor\n```\n\n## Structure\n\n- `src/main.aura` — app entry point\n- `build/` — generated output\n- `.aura-cache/` — incremental build cache\n",
@@ -946,7 +975,7 @@ fn run_command(target: &str, port: u16) {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let project_root = find_project_root(&cwd).unwrap_or(cwd);
     let project_label = project_root.display().to_string();
-    let build_dir = Path::new("build/dev");
+    let build_dir = project_root.join("build/dev");
 
     eprintln!();
     eprintln!("  aura run — dev server with file watching");
@@ -963,7 +992,7 @@ fn run_command(target: &str, port: u16) {
     {
         std::process::exit(1);
     }
-    inject_reload_script(build_dir);
+    inject_reload_script(&build_dir);
 
     let changed = Arc::new(AtomicBool::new(false));
     let changed_clone = changed.clone();

@@ -860,6 +860,10 @@ impl SemanticAnalyzer {
                     params.iter().map(|p| self.resolve_type_expr(p)).collect();
                 AuraType::Action(param_types)
             }
+            TypeExpr::Union(types, _span) => {
+                let resolved: Vec<_> = types.iter().map(|t| self.resolve_type_expr(t)).collect();
+                AuraType::Union(resolved)
+            }
         }
     }
 
