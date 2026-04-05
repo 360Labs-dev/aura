@@ -19,7 +19,7 @@ We are committed to making participation in this project a harassment-free exper
 
 ## Enforcement
 
-Instances of unacceptable behavior may be reported to dev@360labs.ai. All complaints will be reviewed and investigated promptly and fairly.
+Instances of unacceptable behavior may be reported to sk@360labs.ai. All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 
