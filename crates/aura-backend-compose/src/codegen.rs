@@ -311,6 +311,17 @@ impl<'a> ComposeCodegen<'a> {
             HIRView::Progress(_) => {
                 self.line("CircularProgressIndicator()");
             }
+            HIRView::Avatar(avatar) => {
+                let mods = self.layout_modifier(&avatar.design);
+                self.line(&format!("Box({}modifier = Modifier.size(48.dp)) {{", mods));
+                self.indent += 1;
+                self.line(&format!(
+                    "Text(text = {}.toString(), maxLines = 1)",
+                    self.expr_to_kotlin(&avatar.source)
+                ));
+                self.indent -= 1;
+                self.line("}");
+            }
             HIRView::Button(button) => {
                 let label = self.expr_to_kotlin(&button.label);
                 let action = self.action_expr_to_kotlin(&button.action);
@@ -348,6 +359,13 @@ impl<'a> ComposeCodegen<'a> {
                     field.binding, field.binding, ph
                 ));
             }
+            HIRView::TextArea(area) => {
+                let ph = area.placeholder.as_deref().unwrap_or("");
+                self.line(&format!(
+                    "OutlinedTextField(value = {}, onValueChange = {{ {} = it }}, placeholder = {{ Text(\"{}\") }}, minLines = 4)",
+                    area.binding, area.binding, ph
+                ));
+            }
             HIRView::Checkbox(cb) => {
                 self.line(&format!(
                     "Checkbox(checked = {}, onCheckedChange = {{ {} = it }})",
@@ -366,6 +384,57 @@ impl<'a> ComposeCodegen<'a> {
                     "Slider(value = {}.toFloat(), onValueChange = {{ {} = it.toInt() }}, valueRange = {}f..{}f)",
                     slider.binding, slider.binding, slider.min, slider.max
                 ));
+            }
+            HIRView::Picker(picker) => {
+                let options_name = format!("{}Options", picker.binding);
+                self.line(&format!(
+                    "val {} = {}",
+                    options_name,
+                    self.expr_to_kotlin(&picker.options)
+                ));
+                self.line("Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {");
+                self.indent += 1;
+                self.line(&format!("{}.forEach {{ option ->", options_name));
+                self.indent += 1;
+                self.line(&format!(
+                    "FilterChip(selected = {} == option, onClick = {{ {} = option }}, label = {{ Text(option.toString()) }})",
+                    picker.binding, picker.binding
+                ));
+                self.indent -= 1;
+                self.line("}");
+                self.indent -= 1;
+                self.line("}");
+            }
+            HIRView::DatePicker(date_picker) => {
+                let label = date_picker.label.as_deref().unwrap_or("Select date");
+                self.line(&format!(
+                    "OutlinedButton(onClick = {{ /* open date picker */ }}) {{ Text(text = \"{}: ${{{}}}\") }}",
+                    label, date_picker.binding
+                ));
+            }
+            HIRView::Segmented(seg) => {
+                let options_name = format!("{}Options", seg.binding);
+                self.line(&format!(
+                    "val {} = {}",
+                    options_name,
+                    self.expr_to_kotlin(&seg.options)
+                ));
+                self.line("SingleChoiceSegmentedButtonRow {");
+                self.indent += 1;
+                self.line(&format!("{}.forEachIndexed {{ index, option ->", options_name));
+                self.indent += 1;
+                self.line(&format!(
+                    "SegmentedButton(selected = {} == option, onClick = {{ {} = option }}, shape = SegmentedButtonDefaults.itemShape(index = index, count = {}.size)) {{",
+                    seg.binding, seg.binding, options_name
+                ));
+                self.indent += 1;
+                self.line("Text(option.toString())");
+                self.indent -= 1;
+                self.line("}");
+                self.indent -= 1;
+                self.line("}");
+                self.indent -= 1;
+                self.line("}");
             }
             HIRView::Spacer => {
                 self.line("Spacer(modifier = Modifier.weight(1f))");
@@ -476,9 +545,17 @@ impl<'a> ComposeCodegen<'a> {
 
     fn expr_to_kotlin(&self, expr: &HIRExpr) -> String {
         match expr {
-            HIRExpr::StringLit(s) => format!("\"{}\"", s),
+            HIRExpr::StringLit(s) => {
+                if s.contains('{') && s.contains('}') {
+                    let interpolated = s.replace('{', "${").replace('}', "}");
+                    format!("\"{}\"", interpolated)
+                } else {
+                    format!("\"{}\"", s)
+                }
+            }
             HIRExpr::IntLit(n) => n.to_string(),
             HIRExpr::FloatLit(f) => format!("{}f", f),
+            HIRExpr::PercentLit(p) => format!("{}f", p),
             HIRExpr::BoolLit(b) => b.to_string(),
             HIRExpr::Nil => "null".to_string(),
             HIRExpr::Var(name, _) => name.clone(),
@@ -488,6 +565,15 @@ impl<'a> ComposeCodegen<'a> {
             HIRExpr::Call(func, args, _) => {
                 let f = self.expr_to_kotlin(func);
                 let a: Vec<String> = args.iter().map(|a| self.expr_to_kotlin(a)).collect();
+                format!("{}({})", f, a.join(", "))
+            }
+            HIRExpr::NamedCall(func, args, _) => {
+                let f = self.expr_to_kotlin(func);
+                let a: Vec<String> = args
+                    .iter()
+                    .filter(|(k, _)| k != "_")
+                    .map(|(k, v)| format!("{} = {}", k, self.expr_to_kotlin(v)))
+                    .collect();
                 format!("{}({})", f, a.join(", "))
             }
             HIRExpr::BinOp(left, op, right, _) => {
@@ -503,6 +589,8 @@ impl<'a> ComposeCodegen<'a> {
                     aura_core::ast::BinOp::NotEq => "!=",
                     aura_core::ast::BinOp::Lt => "<",
                     aura_core::ast::BinOp::Gt => ">",
+                    aura_core::ast::BinOp::LtEq => "<=",
+                    aura_core::ast::BinOp::GtEq => ">=",
                     aura_core::ast::BinOp::And => "&&",
                     aura_core::ast::BinOp::Or => "||",
                     _ => "/* ? */",
@@ -517,6 +605,13 @@ impl<'a> ComposeCodegen<'a> {
                 }
             }
             HIRExpr::Constructor(name, args, _) => {
+                if name == "list" {
+                    let items: Vec<String> = args
+                        .iter()
+                        .map(|(_, value)| self.expr_to_kotlin(value))
+                        .collect();
+                    return format!("listOf({})", items.join(", "));
+                }
                 let fields: Vec<String> = args
                     .iter()
                     .filter(|(k, _)| k != "_")
@@ -528,6 +623,17 @@ impl<'a> ComposeCodegen<'a> {
                 let p: Vec<&str> = params.iter().map(|p| p.name.as_str()).collect();
                 format!("{{ {} -> {} }}", p.join(", "), self.expr_to_kotlin(body))
             }
+            HIRExpr::Conditional(condition, then_expr, else_expr, _) => format!(
+                "if ({}) {} else {}",
+                self.expr_to_kotlin(condition),
+                self.expr_to_kotlin(then_expr),
+                self.expr_to_kotlin(else_expr)
+            ),
+            HIRExpr::NilCoalesce(left, right, _) => format!(
+                "({} ?: {})",
+                self.expr_to_kotlin(left),
+                self.expr_to_kotlin(right)
+            ),
             _ => "null".to_string(),
         }
     }
@@ -751,5 +857,35 @@ app Test
         text item",
         );
         assert!(output.kotlin.contains("items.forEach { item ->"));
+    }
+
+    #[test]
+    fn test_segmented_generates_segmented_buttons() {
+        let output = compile_source(
+            "\
+app Test
+  screen Main
+    state filter: text = \"All\"
+    view
+      segmented filter options: [\"All\", \"Active\", \"Done\"]",
+        );
+        assert!(output.kotlin.contains("val filterOptions = listOf(\"All\", \"Active\", \"Done\")"));
+        assert!(output.kotlin.contains("SingleChoiceSegmentedButtonRow"));
+        assert!(output.kotlin.contains("SegmentedButton(selected = filter == option"));
+    }
+
+    #[test]
+    fn test_avatar_generates_box_placeholder() {
+        let output = compile_source(
+            "\
+app Test
+  screen Main
+    view
+      avatar \"https://example.com/avatar.png\" .circle",
+        );
+        assert!(output.kotlin.contains("Box(modifier = Modifier.size(48.dp))"));
+        assert!(output
+            .kotlin
+            .contains("Text(text = \"https://example.com/avatar.png\".toString(), maxLines = 1)"));
     }
 }

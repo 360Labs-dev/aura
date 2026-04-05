@@ -410,11 +410,11 @@ fn load_project_context(path: &str) -> Result<ProjectContext, String> {
                 .and_then(find_project_root)
                 .unwrap_or_else(|| raw_path.to_path_buf())
         } else {
-            find_project_root(raw_path).unwrap_or_else(|| raw_path.to_path_buf())
+            resolve_source_directory(raw_path).ok_or_else(|| invalid_project_path_message(raw_path))?
         }
     } else if path == "." {
         let cwd = std::env::current_dir().map_err(|err| err.to_string())?;
-        find_project_root(&cwd).unwrap_or(cwd)
+        resolve_source_directory(&cwd).ok_or_else(|| invalid_project_path_message(&cwd))?
     } else {
         return Err(format!("Path '{}' does not exist", path));
     };
@@ -457,6 +457,46 @@ fn find_project_root(start: &Path) -> Option<PathBuf> {
     }
 
     None
+}
+
+fn direct_aura_sources(dir: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+
+    let mut files: Vec<PathBuf> = entries
+        .flatten()
+        .filter(|entry| entry.file_type().map(|kind| kind.is_file()).unwrap_or(false))
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| ext.eq_ignore_ascii_case("aura"))
+                .unwrap_or(false)
+        })
+        .collect();
+    files.sort();
+    files
+}
+
+fn resolve_source_directory(dir: &Path) -> Option<PathBuf> {
+    if let Some(project_root) = find_project_root(dir) {
+        return Some(project_root);
+    }
+
+    let direct_sources = direct_aura_sources(dir);
+    match direct_sources.as_slice() {
+        [] => None,
+        [single] => Some(single.clone()),
+        _ => Some(dir.to_path_buf()),
+    }
+}
+
+fn invalid_project_path_message(path: &Path) -> String {
+    format!(
+        "Path '{}' is not an Aura project root or source directory.\n  hint: run this from a directory with `aura.toml`, `src/main.aura`, or direct `.aura` source files.",
+        path.display()
+    )
 }
 
 fn print_project_load_errors(context: &ProjectContext, use_json: bool) -> bool {
@@ -1372,6 +1412,90 @@ mod tests {
         assert_eq!(find_project_root(&nested), Some(root.clone()));
 
         let _ = std::fs::remove_file(root.join("aura.toml"));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn test_load_project_context_rejects_repo_like_directory_without_project_markers() {
+        let unique = format!(
+            "aura-cli-test-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        let root = std::env::temp_dir().join(unique);
+        let nested = root.join("examples");
+
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(
+            nested.join("demo.aura"),
+            "app Demo\n  screen Main\n    view\n      text \"Hi\"",
+        )
+        .unwrap();
+
+        let err = match load_project_context(root.to_string_lossy().as_ref()) {
+            Ok(_) => panic!("expected invalid project directory to be rejected"),
+            Err(err) => err,
+        };
+        assert!(err.contains("not an Aura project root or source directory"));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn test_load_project_context_accepts_source_directory_with_direct_aura_files() {
+        let unique = format!(
+            "aura-cli-test-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        let root = std::env::temp_dir().join(unique);
+        let main_file = root.join("main.aura");
+
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(
+            &main_file,
+            "app Demo\n  screen Main\n    view\n      text \"Hi\"",
+        )
+        .unwrap();
+
+        let context = load_project_context(root.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(context.target_path, main_file);
+        assert_eq!(context.project.files.len(), 1);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn test_resolve_source_directory_prefers_single_direct_aura_file() {
+        let unique = format!(
+            "aura-cli-test-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        let root = std::env::temp_dir().join(unique);
+        let nested = root.join("examples");
+        let main_file = root.join("sketch.aura");
+
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(
+            &main_file,
+            "app Demo\n  screen Main\n    view\n      text \"Hi\"",
+        )
+        .unwrap();
+        std::fs::write(
+            nested.join("other.aura"),
+            "app Other\n  screen Main\n    view\n      text \"Nested\"",
+        )
+        .unwrap();
+
+        assert_eq!(resolve_source_directory(&root), Some(main_file.clone()));
+
         let _ = std::fs::remove_dir_all(root);
     }
 }

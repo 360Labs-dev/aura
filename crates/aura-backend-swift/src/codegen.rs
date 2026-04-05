@@ -355,6 +355,26 @@ impl<'a> SwiftCodegen<'a> {
             HIRView::Progress(_) => {
                 self.line("ProgressView()");
             }
+            HIRView::Avatar(avatar) => {
+                let src = self.expr_to_swift(&avatar.source);
+                self.line(&format!(
+                    "AsyncImage(url: URL(string: {})) {{ image in",
+                    src
+                ));
+                self.indent += 1;
+                self.line("image.resizable().aspectRatio(contentMode: .fill)");
+                self.indent -= 1;
+                self.line("} placeholder: {");
+                self.indent += 1;
+                self.line("ProgressView()");
+                self.indent -= 1;
+                self.line("}");
+                self.indent += 1;
+                self.line(".frame(width: 48, height: 48)");
+                self.line(".clipShape(Circle())");
+                self.indent -= 1;
+                self.emit_design_modifiers(&avatar.design);
+            }
             HIRView::Button(button) => {
                 let label = self.expr_to_swift(&button.label);
                 let action = self.action_expr_to_swift(&button.action);
@@ -380,6 +400,13 @@ impl<'a> SwiftCodegen<'a> {
                 ));
                 self.emit_design_modifiers(&field.design);
             }
+            HIRView::TextArea(area) => {
+                self.line(&format!("TextEditor(text: ${})", area.binding));
+                self.indent += 1;
+                self.line(".frame(minHeight: 120)");
+                self.indent -= 1;
+                self.emit_design_modifiers(&area.design);
+            }
             HIRView::Checkbox(cb) => {
                 self.line(&format!("Toggle(isOn: ${}) {{", cb.binding));
                 self.indent += 1;
@@ -401,17 +428,41 @@ impl<'a> SwiftCodegen<'a> {
             HIRView::Picker(picker) => {
                 self.line(&format!("Picker(\"\", selection: ${}) {{", picker.binding));
                 self.indent += 1;
-                self.line("// Options");
+                self.line(&format!(
+                    "ForEach({}, id: \\.self) {{ option in",
+                    self.expr_to_swift(&picker.options)
+                ));
+                self.indent += 1;
+                self.line("Text(String(describing: option)).tag(option)");
                 self.indent -= 1;
                 self.line("}");
+                self.indent -= 1;
+                self.line("}");
+                self.emit_design_modifiers(&picker.design);
+            }
+            HIRView::DatePicker(date_picker) => {
+                let label = date_picker.label.as_deref().unwrap_or("");
+                self.line(&format!(
+                    "DatePicker(\"{}\", selection: ${}, displayedComponents: [.date])",
+                    label, date_picker.binding
+                ));
+                self.emit_design_modifiers(&date_picker.design);
             }
             HIRView::Segmented(seg) => {
                 self.line(&format!("Picker(\"\", selection: ${}) {{", seg.binding));
                 self.indent += 1;
-                self.line("// Segmented options");
+                self.line(&format!(
+                    "ForEach({}, id: \\.self) {{ option in",
+                    self.expr_to_swift(&seg.options)
+                ));
+                self.indent += 1;
+                self.line("Text(String(describing: option)).tag(option)");
+                self.indent -= 1;
+                self.line("}");
                 self.indent -= 1;
                 self.line("}");
                 self.line(".pickerStyle(.segmented)");
+                self.emit_design_modifiers(&seg.design);
             }
             HIRView::Spacer => {
                 self.line("Spacer()");
@@ -693,9 +744,17 @@ impl<'a> SwiftCodegen<'a> {
 
     fn expr_to_swift(&self, expr: &HIRExpr) -> String {
         match expr {
-            HIRExpr::StringLit(s) => format!("\"{}\"", s),
+            HIRExpr::StringLit(s) => {
+                if s.contains('{') && s.contains('}') {
+                    let interpolated = s.replace('{', "\\(").replace('}', ")");
+                    format!("\"{}\"", interpolated)
+                } else {
+                    format!("\"{}\"", s)
+                }
+            }
             HIRExpr::IntLit(n) => n.to_string(),
             HIRExpr::FloatLit(f) => f.to_string(),
+            HIRExpr::PercentLit(p) => p.to_string(),
             HIRExpr::BoolLit(b) => b.to_string(),
             HIRExpr::Nil => "nil".to_string(),
             HIRExpr::Var(name, _) => name.clone(),
@@ -745,6 +804,13 @@ impl<'a> SwiftCodegen<'a> {
                 }
             }
             HIRExpr::Constructor(name, args, _) => {
+                if name == "list" {
+                    let items: Vec<String> = args
+                        .iter()
+                        .map(|(_, value)| self.expr_to_swift(value))
+                        .collect();
+                    return format!("[{}]", items.join(", "));
+                }
                 let fields: Vec<String> = args
                     .iter()
                     .filter(|(k, _)| k != "_")
@@ -756,6 +822,17 @@ impl<'a> SwiftCodegen<'a> {
                 let p: Vec<&str> = params.iter().map(|p| p.name.as_str()).collect();
                 format!("{{ {} in {} }}", p.join(", "), self.expr_to_swift(body))
             }
+            HIRExpr::Conditional(condition, then_expr, else_expr, _) => format!(
+                "({} ? {} : {})",
+                self.expr_to_swift(condition),
+                self.expr_to_swift(then_expr),
+                self.expr_to_swift(else_expr)
+            ),
+            HIRExpr::NilCoalesce(left, right, _) => format!(
+                "({} ?? {})",
+                self.expr_to_swift(left),
+                self.expr_to_swift(right)
+            ),
             _ => "/* expr */".to_string(),
         }
     }
@@ -976,5 +1053,35 @@ app Test
         text item",
         );
         assert!(output.swift.contains("ForEach(items"));
+    }
+
+    #[test]
+    fn test_segmented_generates_segmented_picker() {
+        let output = compile_source(
+            "\
+app Test
+  screen Main
+    state filter: text = \"All\"
+    view
+      segmented filter options: [\"All\", \"Active\", \"Done\"]",
+        );
+        assert!(output.swift.contains("Picker(\"\", selection: $filter)"));
+        assert!(output.swift.contains("ForEach([\"All\", \"Active\", \"Done\"], id: \\.self)"));
+        assert!(output.swift.contains(".pickerStyle(.segmented)"));
+    }
+
+    #[test]
+    fn test_avatar_generates_async_image() {
+        let output = compile_source(
+            "\
+app Test
+  screen Main
+    view
+      avatar \"https://example.com/avatar.png\" .circle",
+        );
+        assert!(output
+            .swift
+            .contains("AsyncImage(url: URL(string: \"https://example.com/avatar.png\"))"));
+        assert!(output.swift.contains(".clipShape(Circle())"));
     }
 }

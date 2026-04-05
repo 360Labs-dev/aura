@@ -69,6 +69,8 @@ pub struct AgentDiagnostic {
 
 #[derive(Debug, Serialize)]
 pub struct AgentLocation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
     pub start: usize,
     pub end: usize,
     pub line: usize,

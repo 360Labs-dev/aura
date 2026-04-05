@@ -1,0 +1,98 @@
+// Launchpad — Reference Aura app for the current project workflow
+// Demonstrates: models, components, state, actions, filters, lists, segmented controls
+
+app Launchpad
+  theme: modern.light
+  platform: all
+
+  model Milestone
+    title: text
+    owner: text
+    stage: text
+    completed: bool = false
+
+  component MilestoneRow(item: Milestone, onAdvance: action, onToggle: action)
+    view
+      row gap.md align.center padding.sm .surface .rounded
+        checkbox item.completed -> onToggle()
+        column gap.xs
+          text item.title .medium
+          text "{item.owner} - {item.stage}" size.xs .muted
+        spacer
+        if item.completed
+          badge "Done" .success
+        else
+          button "Advance" .accent -> onAdvance()
+
+  screen Main
+    state milestones: list[Milestone] = [
+      Milestone(title: "Write launch brief", owner: "Design", stage: "Draft"),
+      Milestone(title: "Review onboarding flow", owner: "Product", stage: "Review"),
+      Milestone(title: "Publish marketing page", owner: "Growth", stage: "Live", completed: true)
+    ]
+    state draft: text = ""
+    state owner: text = "Design"
+    state filter: text = "All"
+    state showCompleted: bool = true
+
+    view
+      column gap.lg padding.lg
+        heading "Launch Board" size.2xl .bold
+        text "Plan, filter, and ship UI work from one Aura file." .secondary
+
+        row gap.sm
+          textfield draft placeholder: "Add a milestone"
+          button "Add" .accent -> addMilestone(draft, owner)
+
+        row gap.md align.center
+          segmented filter options: ["All", "Draft", "Review", "Live"]
+          toggle showCompleted label: "Show completed"
+
+        if visibleMilestones.isEmpty
+          column gap.sm padding.lg .surface .rounded
+            text "No milestones match the current filter." .muted
+        else
+          scroll
+            column gap.sm
+              each visibleMilestones as item
+                MilestoneRow(item,
+                  onAdvance: -> advance(item),
+                  onToggle: -> toggle(item))
+
+    fn visibleMilestones -> list[Milestone]
+      if showCompleted
+        if filter == "All"
+          milestones
+        else
+          milestones.where(m => m.stage == filter)
+      else
+        if filter == "All"
+          milestones.where(m => not m.completed)
+        else
+          milestones.where(m => m.stage == filter and not m.completed)
+
+    fn nextStage(stage: text) -> text
+      if stage == "Draft"
+        "Review"
+      else
+        "Live"
+
+    action addMilestone(title: text, ownerName: text)
+      if not title.trim().isEmpty
+        milestones = milestones.append(Milestone(
+          title: title.trim(),
+          owner: ownerName,
+          stage: "Draft"))
+        draft = ""
+
+    action advance(item: Milestone)
+      milestones = milestones.map(m =>
+        if m == item
+          then m.with(
+            stage: nextStage(m.stage),
+            completed: nextStage(m.stage) == "Live")
+          else m)
+
+    action toggle(item: Milestone)
+      milestones = milestones.map(m =>
+        if m == item then m.with(completed: not m.completed) else m)
