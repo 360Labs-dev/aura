@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n  model Result\n    value: text | int\n  screen M\n    view\n      text \\\"hi\\\"\")"
+---
+

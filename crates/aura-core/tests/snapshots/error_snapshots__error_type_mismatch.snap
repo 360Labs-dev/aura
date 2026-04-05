@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n  model Item\n    count: int = \\\"not a number\\\"\")"
+---
+[E0101] Type mismatch: expected int, found text

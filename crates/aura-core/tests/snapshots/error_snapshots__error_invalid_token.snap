@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n  screen M\n    view\n      column .xxxlarge\n        text \\\"hi\\\"\")"
+---
+[E0400] Unknown design token '.xxxlarge' fix: '.xxxlarge' (50%)

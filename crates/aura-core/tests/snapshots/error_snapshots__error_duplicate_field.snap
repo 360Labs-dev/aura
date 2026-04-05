@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n  model Bad\n    name: text\n    name: int\")"
+---
+[E0105] Duplicate field 'name' in model 'Bad'

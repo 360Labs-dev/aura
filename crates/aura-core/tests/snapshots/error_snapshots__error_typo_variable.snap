@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n  screen M\n    state todos: list[text] = []\n    view\n      text \\\"hi\\\"\n    action test\n      todoos = []\")"
+---
+[E0103] Unknown variable 'todoos'. Did you mean 'todos'? fix: 'todos' (80%)

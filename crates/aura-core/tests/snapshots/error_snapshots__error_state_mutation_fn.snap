@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n  screen M\n    state x: int = 0\n    view\n      text \\\"hi\\\"\n    fn bad\n      x = 1\")"
+---
+[E0302] Cannot mutate state 'x' in a pure function. Use an action instead.

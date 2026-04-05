@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n  model Todo\n    title: text\n    done: bool = false\n  screen M\n    state items: list[Todo] = []\n    view\n      text \\\"hi\\\"\")"
+---
+

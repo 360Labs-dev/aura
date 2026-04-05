@@ -1,0 +1,5 @@
+---
+source: crates/aura-core/tests/error_snapshots.rs
+expression: "errors_for(\"\\\napp T\n   screen M\n    view\n      text \\\"hi\\\"\")"
+---
+[E0011] Inconsistent indentation: 3 spaces (must be a multiple of 2) help: Use 2 or 4 spaces here.
