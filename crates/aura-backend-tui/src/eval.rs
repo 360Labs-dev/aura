@@ -160,12 +160,7 @@ fn values_eq(a: &Value, b: &Value) -> bool {
 }
 
 /// Run an action by name, mutating state.
-pub fn run_action(
-    name: &str,
-    args: &[Value],
-    actions: &[HIRAction],
-    state: &mut Scope,
-) {
+pub fn run_action(name: &str, args: &[Value], actions: &[HIRAction], state: &mut Scope) {
     let Some(action) = actions.iter().find(|a| a.name == name) else {
         return;
     };
@@ -177,11 +172,7 @@ pub fn run_action(
 }
 
 /// Execute an action expression (e.g., button press).
-pub fn run_action_expr(
-    expr: &HIRActionExpr,
-    actions: &[HIRAction],
-    state: &mut Scope,
-) {
+pub fn run_action_expr(expr: &HIRActionExpr, actions: &[HIRAction], state: &mut Scope) {
     match expr {
         HIRActionExpr::Call(name, args) => {
             let empty: Scope = HashMap::new();
@@ -199,12 +190,7 @@ pub fn run_action_expr(
     }
 }
 
-fn run_stmts(
-    stmts: &[HIRStmt],
-    state: &mut Scope,
-    locals: &mut Scope,
-    actions: &[HIRAction],
-) {
+fn run_stmts(stmts: &[HIRStmt], state: &mut Scope, locals: &mut Scope, actions: &[HIRAction]) {
     for stmt in stmts {
         match stmt {
             HIRStmt::Assign(name, expr) => {
@@ -267,7 +253,10 @@ mod tests {
         let mut state = Scope::new();
         state.insert("count".to_string(), Value::Int(5));
         let locals = Scope::new();
-        let expr = HIRExpr::Var("count".to_string(), AuraType::Primitive(aura_core::types::PrimitiveType::Int));
+        let expr = HIRExpr::Var(
+            "count".to_string(),
+            AuraType::Primitive(aura_core::types::PrimitiveType::Int),
+        );
         assert_eq!(eval_expr(&expr, &state, &locals), Value::Int(5));
     }
 

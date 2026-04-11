@@ -28,5 +28,5 @@ mod render;
 mod runtime;
 mod value;
 
-pub use runtime::{run_tui, TuiError};
+pub use runtime::{TuiError, run_tui};
 pub use value::Value;
