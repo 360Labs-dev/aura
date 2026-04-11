@@ -1,6 +1,6 @@
 [package]
 name = "aura-backend-tui"
-description = "Aura → Terminal UI codegen backend"
+description = "Aura → Terminal UI runtime backend (ratatui)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,6 +8,8 @@ license.workspace = true
 [dependencies]
 aura-core = { path = "../aura-core" }
 thiserror.workspace = true
+ratatui = "0.29"
+crossterm = "0.28"
 
 [dev-dependencies]
 insta.workspace = true
