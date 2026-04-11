@@ -1,21 +1,21 @@
 //! TUI runtime: event loop, state, input handling.
 
-use crate::eval::{run_action_expr, Scope};
-use crate::render::{render_view, Focusable, RenderCtx};
+use crate::eval::{Scope, run_action_expr};
+use crate::render::{Focusable, RenderCtx, render_view};
 use crate::value::Value;
 use aura_core::hir::*;
 use aura_core::types::{AuraType, PrimitiveType};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     layout::Rect,
     style::{Color, Style},
     widgets::{Block, Borders},
-    Terminal,
 };
 use std::io;
 
@@ -117,8 +117,7 @@ pub fn run_tui(module: &HIRModule) -> Result<(), TuiError> {
                             Focusable::Button { action } => {
                                 run_action_expr(&action, &screen.actions, &mut state);
                             }
-                            Focusable::Checkbox { binding }
-                            | Focusable::Toggle { binding } => {
+                            Focusable::Checkbox { binding } | Focusable::Toggle { binding } => {
                                 toggle_bool(&mut state, &binding);
                             }
                             _ => {}
@@ -128,8 +127,7 @@ pub fn run_tui(module: &HIRModule) -> Result<(), TuiError> {
                 KeyCode::Char(' ') => {
                     if let Some(f) = focused.and_then(|i| collected_focus.get(i).cloned()) {
                         match f {
-                            Focusable::Checkbox { binding }
-                            | Focusable::Toggle { binding } => {
+                            Focusable::Checkbox { binding } | Focusable::Toggle { binding } => {
                                 toggle_bool(&mut state, &binding);
                             }
                             Focusable::TextField { binding } => {
@@ -238,7 +236,11 @@ mod tests {
 
     fn compile(source: &str) -> HIRModule {
         let result = aura_core::parser::parse(source);
-        assert!(result.errors.is_empty(), "Parse errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Parse errors: {:?}",
+            result.errors
+        );
         aura_core::hir::build_hir(result.program.as_ref().unwrap())
     }
 

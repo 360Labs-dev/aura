@@ -1,15 +1,15 @@
 //! Render HIR views to ratatui widgets.
 
-use crate::eval::{eval_expr, Scope};
+use crate::eval::{Scope, eval_expr};
 use crate::value::Value;
 use aura_core::design::ResolvedDesign;
 use aura_core::hir::*;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Gauge, Paragraph, Wrap},
-    Frame,
 };
 
 /// Identifier of an interactive element — its index within the focusable list.
@@ -18,18 +18,10 @@ pub type FocusId = usize;
 /// A focusable element discovered during the render pass.
 #[derive(Debug, Clone)]
 pub enum Focusable {
-    Button {
-        action: HIRActionExpr,
-    },
-    TextField {
-        binding: String,
-    },
-    Checkbox {
-        binding: String,
-    },
-    Toggle {
-        binding: String,
-    },
+    Button { action: HIRActionExpr },
+    TextField { binding: String },
+    Checkbox { binding: String },
+    Toggle { binding: String },
 }
 
 /// Per-frame render context: focus list + currently focused element.
@@ -41,11 +33,7 @@ pub struct RenderCtx<'a> {
 }
 
 impl<'a> RenderCtx<'a> {
-    pub fn new(
-        state: &'a Scope,
-        components: &'a [HIRComponent],
-        focused: Option<FocusId>,
-    ) -> Self {
+    pub fn new(state: &'a Scope, components: &'a [HIRComponent], focused: Option<FocusId>) -> Self {
         Self {
             state,
             components,
@@ -73,8 +61,12 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
         return;
     }
     match view {
-        HIRView::Column(layout) => emit_layout(frame, area, &layout.children, Direction::Vertical, ctx),
-        HIRView::Row(layout) => emit_layout(frame, area, &layout.children, Direction::Horizontal, ctx),
+        HIRView::Column(layout) => {
+            emit_layout(frame, area, &layout.children, Direction::Vertical, ctx)
+        }
+        HIRView::Row(layout) => {
+            emit_layout(frame, area, &layout.children, Direction::Horizontal, ctx)
+        }
         HIRView::Stack(layout) => {
             // Stack overlays — render last child on top of the area.
             if let Some(last) = layout.children.last() {
@@ -90,9 +82,7 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
         HIRView::Wrap(layout) => {
             emit_layout(frame, area, &layout.children, Direction::Horizontal, ctx)
         }
-        HIRView::Group(children) => {
-            emit_layout(frame, area, children, Direction::Vertical, ctx)
-        }
+        HIRView::Group(children) => emit_layout(frame, area, children, Direction::Vertical, ctx),
 
         HIRView::Text(text) => {
             let content = value_to_string(&eval_expr(&text.content, ctx.state, &Scope::new()));
@@ -111,8 +101,8 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
                 style = style.fg(Color::White);
             }
             let alignment = text_alignment(&heading.design);
-            let para = Paragraph::new(Line::from(Span::styled(content, style)))
-                .alignment(alignment);
+            let para =
+                Paragraph::new(Line::from(Span::styled(content, style))).alignment(alignment);
             frame.render_widget(para, area);
         }
         HIRView::Button(button) => {
@@ -136,7 +126,9 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
                 style = style.add_modifier(Modifier::BOLD).bg(Color::DarkGray);
             }
             let border_style = if focused {
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(Color::DarkGray)
             };
@@ -163,14 +155,19 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
                 .unwrap_or_default();
             let (text, style) = if current.is_empty() {
                 (
-                    field.placeholder.clone().unwrap_or_else(|| "...".to_string()),
+                    field
+                        .placeholder
+                        .clone()
+                        .unwrap_or_else(|| "...".to_string()),
                     Style::default().fg(Color::DarkGray),
                 )
             } else {
                 (current, Style::default().fg(Color::White))
             };
             let border_style = if focused {
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(Color::DarkGray)
             };
@@ -199,7 +196,10 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
                 .unwrap_or_default();
             let (text, style) = if current.is_empty() {
                 (
-                    field.placeholder.clone().unwrap_or_else(|| "...".to_string()),
+                    field
+                        .placeholder
+                        .clone()
+                        .unwrap_or_else(|| "...".to_string()),
                     Style::default().fg(Color::DarkGray),
                 )
             } else {
@@ -268,8 +268,8 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
                 .get(&slider.binding)
                 .map(|v| v.as_float())
                 .unwrap_or(slider.min);
-            let ratio = ((current - slider.min) / (slider.max - slider.min).max(0.0001))
-                .clamp(0.0, 1.0);
+            let ratio =
+                ((current - slider.min) / (slider.max - slider.min).max(0.0001)).clamp(0.0, 1.0);
             let gauge = Gauge::default()
                 .ratio(ratio)
                 .gauge_style(Style::default().fg(Color::Blue))
@@ -307,13 +307,11 @@ fn emit_view(frame: &mut Frame, area: Rect, view: &HIRView, ctx: &mut RenderCtx)
             frame.render_widget(gauge, area);
         }
         HIRView::Image(_) => {
-            let para =
-                Paragraph::new("[image]").style(Style::default().fg(Color::DarkGray));
+            let para = Paragraph::new("[image]").style(Style::default().fg(Color::DarkGray));
             frame.render_widget(para, area);
         }
         HIRView::Avatar(_) => {
-            let para =
-                Paragraph::new("(@)").style(Style::default().fg(Color::Cyan));
+            let para = Paragraph::new("(@)").style(Style::default().fg(Color::Cyan));
             frame.render_widget(para, area);
         }
         HIRView::Conditional(cond) => {
@@ -380,8 +378,8 @@ fn emit_view_with_locals(
         HIRView::Text(text) => {
             let content = value_to_string(&eval_expr(&text.content, ctx.state, locals));
             let style = design_to_style(&text.design);
-            let para = Paragraph::new(Line::from(Span::styled(content, style)))
-                .wrap(Wrap { trim: true });
+            let para =
+                Paragraph::new(Line::from(Span::styled(content, style))).wrap(Wrap { trim: true });
             frame.render_widget(para, area);
         }
         HIRView::Heading(heading) => {
@@ -484,7 +482,12 @@ fn estimate_height(view: &HIRView) -> u16 {
             .map(estimate_height)
             .max()
             .unwrap_or(1),
-        HIRView::Column(layout) => layout.children.iter().map(estimate_height).sum::<u16>().max(1),
+        HIRView::Column(layout) => layout
+            .children
+            .iter()
+            .map(estimate_height)
+            .sum::<u16>()
+            .max(1),
         HIRView::Group(children) => children.iter().map(estimate_height).sum::<u16>().max(1),
         HIRView::Each(each) => estimate_height(&each.body).saturating_mul(3).max(3),
         _ => 1,
