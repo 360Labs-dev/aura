@@ -43,7 +43,7 @@ strsim = "0.11"       # Edit distance for "did you mean?"
 unicode-normalization = "0.1"
 
 # Config parsing
-toml = "0.8"
+toml = "1.1"
 
 # File watching
 notify = "7"
